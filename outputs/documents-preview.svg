@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">Factura e recibo</title>
+  <desc id="desc">Ilustração simples de documentos comerciais para o ContaFácil MZ.</desc>
+  <rect width="960" height="600" fill="#eef3ee"/>
+  <rect x="120" y="90" width="330" height="420" rx="10" fill="#ffffff" stroke="#b8c7bb" stroke-width="4"/>
+  <rect x="180" y="140" width="160" height="22" rx="4" fill="#16734d"/>
+  <rect x="180" y="200" width="210" height="12" rx="4" fill="#b8c7bb"/>
+  <rect x="180" y="235" width="180" height="12" rx="4" fill="#d7ded7"/>
+  <rect x="180" y="300" width="220" height="10" rx="4" fill="#b8c7bb"/>
+  <rect x="180" y="330" width="220" height="10" rx="4" fill="#d7ded7"/>
+  <rect x="180" y="360" width="220" height="10" rx="4" fill="#d7ded7"/>
+  <rect x="180" y="435" width="190" height="18" rx="4" fill="#12201a"/>
+  <rect x="500" y="150" width="260" height="320" rx="10" fill="#ffffff" stroke="#b8c7bb" stroke-width="4"/>
+  <rect x="545" y="200" width="120" height="18" rx="4" fill="#245e8f"/>
+  <rect x="545" y="255" width="170" height="10" rx="4" fill="#b8c7bb"/>
+  <rect x="545" y="290" width="145" height="10" rx="4" fill="#d7ded7"/>
+  <rect x="545" y="350" width="170" height="12" rx="4" fill="#12201a"/>
+  <circle cx="760" cy="430" r="54" fill="#d7f2df" stroke="#16734d" stroke-width="4"/>
+  <path d="M735 430l17 17 34-40" fill="none" stroke="#16734d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
