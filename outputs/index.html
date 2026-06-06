@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ContaFácil MZ | Facturação e Recibos</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <section class="auth-screen" id="authScreen" aria-labelledby="loginTitle">
+      <div class="auth-panel">
+        <div class="brand auth-brand">
+          <span class="brand-mark" aria-hidden="true">CF</span>
+          <div>
+            <strong>ContaFácil MZ</strong>
+            <span>Licenças de facturação para empresas</span>
+          </div>
+        </div>
+        <div>
+          <p class="eyebrow">Entrar no sistema</p>
+          <h1 id="loginTitle">Acesso por empresa ou administrador</h1>
+        </div>
+        <div class="login-switch" role="group" aria-label="Tipo de conta">
+          <button class="selected" type="button" data-login-role="company">Empresa</button>
+          <button type="button" data-login-role="admin">Admin</button>
+        </div>
+        <form class="login-form" id="loginForm">
+          <label>
+            <span id="identityLabel">NUIT da empresa</span>
+            <input id="loginIdentity" type="text" value="400884112" autocomplete="username">
+          </label>
+          <label>
+            <span>Palavra-passe</span>
+            <input id="loginPassword" type="password" value="demo123" autocomplete="current-password">
+          </label>
+          <button class="primary-button" type="submit">Entrar</button>
+        </form>
+        <div class="demo-access">
+          <button type="button" data-demo-login="company">Empresa demo</button>
+          <button type="button" data-demo-login="admin">Admin demo</button>
+        </div>
+      </div>
+      <aside class="auth-summary">
+        <strong>Modelo SaaS multi-empresa</strong>
+        <span>Cada empresa entra com o seu NUIT, dados, documentos e utilizadores isolados.</span>
+        <span>O administrador gere planos, licenças, módulos activos e estado de pagamento.</span>
+      </aside>
+    </section>
+
+    <div class="app-shell is-locked" id="appShell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">CF</span>
+          <div>
+            <strong>ContaFácil MZ</strong>
+            <span>Facturação</span>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" data-view="dashboard" type="button">
+            <span class="icon" aria-hidden="true">▦</span>
+            Painel
+          </button>
+          <button class="nav-item" data-view="documents" type="button">
+            <span class="icon" aria-hidden="true">▤</span>
+            Documentos
+          </button>
+          <button class="nav-item" data-view="clients" type="button">
+            <span class="icon" aria-hidden="true">◫</span>
+            Clientes
+          </button>
+          <button class="nav-item" data-view="reports" type="button">
+            <span class="icon" aria-hidden="true">▥</span>
+            Relatórios
+          </button>
+          <button class="nav-item" data-view="users" type="button">
+            <span class="icon" aria-hidden="true">◧</span>
+            Utilizadores
+          </button>
+          <button class="nav-item admin-nav" data-view="admin" type="button" hidden>
+            <span class="icon" aria-hidden="true">▣</span>
+            Admin
+          </button>
+        </nav>
+
+        <div class="sidebar-card">
+          <span>Plano actual</span>
+          <strong id="planName">Profissional</strong>
+          <small>IVA normal 16%, NUIT e séries fiscais activos</small>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Empresa activa</p>
+            <h1 id="activeCompanyName">Padaria Baía de Maputo, Lda.</h1>
+          </div>
+          <div class="topbar-actions">
+            <span class="account-pill" id="accountPill">Empresa demo</span>
+            <button class="ghost-button" id="exportButton" type="button">Exportar</button>
+            <button class="primary-button" id="newInvoiceButton" type="button">Nova factura</button>
+            <button class="ghost-button" id="logoutButton" type="button">Sair</button>
+          </div>
+        </header>
+
+        <section class="notice" aria-label="Resumo fiscal">
+          <img src="assets/documents-preview.svg" alt="Documento de factura e recibo sobre uma secretária">
+          <div>
+            <strong>Junho está pronto para fecho fiscal.</strong>
+            <span>Confirma facturas pendentes, emite recibos e prepara a declaração periódica de IVA.</span>
+          </div>
+          <button class="secondary-button" type="button" data-view-shortcut="documents">Rever pendentes</button>
+        </section>
+
+        <section class="view active" id="dashboard" aria-labelledby="dashboardTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Visão geral</p>
+              <h2 id="dashboardTitle">Painel financeiro</h2>
+            </div>
+            <div class="period-switch" role="group" aria-label="Período">
+              <button class="selected" type="button">Mês</button>
+              <button type="button">Trimestre</button>
+              <button type="button">Ano</button>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric">
+              <span>Total facturado</span>
+              <strong id="metricRevenue">MT 0,00</strong>
+              <small id="metricRevenueNote">Documentos emitidos</small>
+            </article>
+            <article class="metric">
+              <span>IVA liquidado</span>
+              <strong id="metricVat">MT 0,00</strong>
+              <small>IVA normal de 16%</small>
+            </article>
+            <article class="metric">
+              <span>Por receber</span>
+              <strong id="metricReceivable">MT 0,00</strong>
+              <small id="metricReceivableNote">Facturas pendentes e vencidas</small>
+            </article>
+            <article class="metric">
+              <span>Recibos emitidos</span>
+              <strong id="metricReceipts">0</strong>
+              <small id="metricReceiptNote">Sem recibos emitidos</small>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <article class="panel">
+              <div class="panel-header">
+                <h3>Fluxo de caixa</h3>
+                <span>Junho 2026</span>
+              </div>
+              <div class="cash-chart" aria-label="Gráfico de entradas e saídas">
+                <span style="height: 42%"></span>
+                <span style="height: 67%"></span>
+                <span style="height: 50%"></span>
+                <span style="height: 78%"></span>
+                <span style="height: 61%"></span>
+                <span style="height: 88%"></span>
+                <span style="height: 72%"></span>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-header">
+                <h3>Tarefas fiscais</h3>
+                <span>Prioridade</span>
+              </div>
+              <ul class="task-list">
+                <li><span class="status warn"></span> Validar NUIT de 3 novos clientes</li>
+                <li><span class="status ok"></span> Série FT 2026 configurada</li>
+                <li><span class="status danger"></span> 2 facturas vencidas sem recibo</li>
+                <li><span class="status ok"></span> Mapa de IVA preparado para submissão</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="documents" aria-labelledby="documentsTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Facturas e recibos</p>
+              <h2 id="documentsTitle">Documentos comerciais</h2>
+            </div>
+            <button class="primary-button" type="button" id="newReceiptButton">Emitir recibo</button>
+          </div>
+
+          <div class="toolbar">
+            <label>
+              <span>Pesquisar</span>
+              <input id="documentSearch" type="search" placeholder="Cliente, número ou estado">
+            </label>
+            <label>
+              <span>Estado</span>
+              <select id="statusFilter">
+                <option value="all">Todos</option>
+                <option value="Pago">Pago</option>
+                <option value="Pendente">Pendente</option>
+                <option value="Vencido">Vencido</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Número</th>
+                  <th>Cliente</th>
+                  <th>Tipo</th>
+                  <th>Itens</th>
+                  <th>Data</th>
+                  <th>Estado</th>
+                  <th class="numeric">Total</th>
+                  <th>Acções</th>
+                </tr>
+              </thead>
+              <tbody id="documentRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" id="clients" aria-labelledby="clientsTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Base comercial</p>
+              <h2 id="clientsTitle">Clientes</h2>
+            </div>
+            <button class="primary-button" type="button" id="newClientButton">Novo cliente</button>
+          </div>
+          <div class="client-grid" id="clientCards"></div>
+        </section>
+
+        <section class="view" id="reports" aria-labelledby="reportsTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Contabilidade</p>
+              <h2 id="reportsTitle">Relatórios</h2>
+            </div>
+            <button class="primary-button" type="button" id="prepareVatButton">Preparar IVA</button>
+          </div>
+          <div class="report-list">
+            <button type="button" id="vatReportButton"><span>Mapa de IVA</span><strong id="vatReportStatus">Pronto</strong></button>
+            <button type="button"><span>Balancete mensal</span><strong>Demo</strong></button>
+            <button type="button"><span>Vendas por cliente</span><strong id="clientSalesStatus">Pronto</strong></button>
+            <button type="button"><span>Facturas vencidas</span><strong id="overdueStatus">0 itens</strong></button>
+          </div>
+        </section>
+
+        <section class="view" id="users" aria-labelledby="usersTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Acessos</p>
+              <h2 id="usersTitle">Gestão de utilizadores</h2>
+            </div>
+            <button class="primary-button" type="button" id="newUserButton">Novo utilizador</button>
+          </div>
+
+          <div class="toolbar">
+            <label>
+              <span>Pesquisar</span>
+              <input id="userSearch" type="search" placeholder="Nome, email ou função">
+            </label>
+            <label>
+              <span>Estado</span>
+              <select id="userStatusFilter">
+                <option value="all">Todos</option>
+                <option value="Activo">Activo</option>
+                <option value="Bloqueado">Bloqueado</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Função</th>
+                  <th>Estado</th>
+                  <th>Último acesso</th>
+                  <th>Acções</th>
+                </tr>
+              </thead>
+              <tbody id="userRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" id="admin" aria-labelledby="adminTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Administração SaaS</p>
+              <h2 id="adminTitle">Empresas, licenças e módulos</h2>
+            </div>
+            <button class="primary-button" type="button" id="newCompanyButton">Nova licença</button>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric">
+              <span>Empresas activas</span>
+              <strong>3</strong>
+              <small>2 no plano Profissional</small>
+            </article>
+            <article class="metric">
+              <span>Receita mensal</span>
+              <strong>MT 33 500,00</strong>
+              <small>Licenças recorrentes</small>
+            </article>
+            <article class="metric">
+              <span>Licenças suspensas</span>
+              <strong>1</strong>
+              <small>Pagamento pendente</small>
+            </article>
+            <article class="metric">
+              <span>Módulos</span>
+              <strong>5</strong>
+              <small>Facturação, recibos, IVA, relatórios, utilizadores</small>
+            </article>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th>NUIT</th>
+                  <th>Plano</th>
+                  <th>Estado</th>
+                  <th>Módulos activos</th>
+                  <th class="numeric">Mensalidade</th>
+                  <th>Acções</th>
+                </tr>
+              </thead>
+              <tbody id="licenseRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="documentDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Documento</p>
+            <h2 id="dialogTitle">Nova factura</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>Cliente</span>
+            <select id="clientInput">
+              <option>Mercado Central Maputo</option>
+              <option>Café Avenida Julius Nyerere</option>
+              <option>Hotel Baía da Beira</option>
+            </select>
+          </label>
+          <label>
+            <span>Tipo</span>
+            <select id="typeInput">
+              <option>Factura</option>
+              <option>Recibo</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="line-items-panel">
+          <div class="panel-header compact-header">
+            <h3>Itens do documento</h3>
+            <button class="secondary-button" id="addLineItemButton" type="button">Adicionar item</button>
+          </div>
+          <div class="line-items" id="lineItems"></div>
+        </div>
+
+        <div class="document-preview">
+          <span>Subtotal</span>
+          <strong id="previewSubtotal">MT 0,00</strong>
+          <span>IVA</span>
+          <strong id="previewVat">MT 0,00</strong>
+          <span>Total</span>
+          <strong id="previewTotal">MT 0,00</strong>
+        </div>
+
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="createDocumentButton" value="default" type="submit">Emitir documento</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="documentDetailsDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Detalhes do documento</p>
+            <h2 id="detailsTitle">Factura</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+        </div>
+
+        <div class="details-summary" id="detailsSummary"></div>
+
+        <div class="table-wrap details-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th class="numeric">Qtd.</th>
+                <th class="numeric">Preço unit.</th>
+                <th class="numeric">IVA</th>
+                <th class="numeric">Total</th>
+              </tr>
+            </thead>
+            <tbody id="detailsItemRows"></tbody>
+          </table>
+        </div>
+
+        <div class="document-preview">
+          <span>Subtotal</span>
+          <strong id="detailsSubtotal">MT 0,00</strong>
+          <span>IVA</span>
+          <strong id="detailsVat">MT 0,00</strong>
+          <span>Total</span>
+          <strong id="detailsTotal">MT 0,00</strong>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary-button" id="downloadPdfButton" type="button">Baixar PDF</button>
+          <button class="ghost-button" value="cancel" type="submit">Fechar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="userDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Utilizador</p>
+            <h2>Novo utilizador</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Nome</span>
+            <input id="userNameInput" type="text" value="Ana Mutemba">
+          </label>
+          <label>
+            <span>Email</span>
+            <input id="userEmailInput" type="email" value="ana@empresa.co.mz">
+          </label>
+          <label>
+            <span>Função</span>
+            <select id="userRoleInput">
+              <option>Administrador</option>
+              <option selected>Contabilista</option>
+              <option>Operador</option>
+              <option>Consulta</option>
+            </select>
+          </label>
+          <label>
+            <span>Estado</span>
+            <select id="userStatusInput">
+              <option selected>Activo</option>
+              <option>Bloqueado</option>
+            </select>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="createUserButton" value="default" type="submit">Guardar utilizador</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="clientDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Cliente</p>
+            <h2>Novo cliente</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Nome do cliente</span>
+            <input id="clientNameInput" type="text" value="Distribuidora Zambeze">
+          </label>
+          <label>
+            <span>NUIT</span>
+            <input id="clientNuitInput" type="text" value="403998221">
+          </label>
+          <label>
+            <span>Cidade</span>
+            <input id="clientCityInput" type="text" value="Maputo">
+          </label>
+          <label>
+            <span>Endereço</span>
+            <input id="clientAddressInput" type="text" value="Av. 25 de Setembro, Maputo">
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="createClientButton" value="default" type="submit">Guardar cliente</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="companyDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Licença</p>
+            <h2>Nova empresa</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Nome da empresa</span>
+            <input id="companyNameInput" type="text" value="Comercial Nacala, Lda.">
+          </label>
+          <label>
+            <span>NUIT</span>
+            <input id="companyNuitInput" type="text" value="404775331">
+          </label>
+          <label>
+            <span>Endereço da empresa</span>
+            <input id="companyAddressInput" type="text" value="Av. Samora Machel, Nacala">
+          </label>
+          <label>
+            <span>Plano</span>
+            <select id="companyPlanInput">
+              <option>Essencial</option>
+              <option selected>Profissional</option>
+              <option>Enterprise</option>
+            </select>
+          </label>
+          <label>
+            <span>Mensalidade</span>
+            <input id="companyMonthlyInput" type="number" min="0" step="100" value="12500">
+          </label>
+        </div>
+        <fieldset class="module-fieldset">
+          <legend>Módulos activos</legend>
+          <label><input type="checkbox" value="Facturacao" checked> Facturação</label>
+          <label><input type="checkbox" value="Recibos" checked> Recibos</label>
+          <label><input type="checkbox" value="IVA" checked> IVA</label>
+          <label><input type="checkbox" value="Relatorios" checked> Relatórios</label>
+          <label><input type="checkbox" value="Utilizadores"> Utilizadores</label>
+        </fieldset>
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="createCompanyButton" value="default" type="submit">Criar licença</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

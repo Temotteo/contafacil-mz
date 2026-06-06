@@ -1,0 +1,1023 @@
+const STORAGE_KEY = "contafacil-mz-state-v2";
+const VAT_RATE = 16;
+
+function makeItems(description, net, vatRate = VAT_RATE) {
+  const quantity = 1;
+  const unitPrice = Number(net || 0);
+  const vat = unitPrice * quantity * (vatRate / 100);
+  return [{ description, quantity, unitPrice, vatRate, vat, total: unitPrice + vat }];
+}
+
+const seedState = {
+  companies: [
+    {
+      name: "Padaria Baia de Maputo, Lda.",
+      nuit: "400884112",
+      address: "Av. Marginal, Bairro da Costa do Sol, Maputo",
+      plan: "Profissional",
+      status: "Activa",
+      modules: ["Facturacao", "Recibos", "IVA", "Relatorios", "Utilizadores"],
+      monthly: 12500,
+      clients: [
+        { name: "Mercado Central Maputo", nuit: "500884112", city: "Maputo", address: "Av. Guerra Popular, Mercado Central, Maputo" },
+        { name: "Cafe Avenida Julius Nyerere", nuit: "501220775", city: "Maputo", address: "Av. Julius Nyerere, Polana, Maputo" },
+        { name: "Hotel Baia da Beira", nuit: "502112390", city: "Beira", address: "Av. Marginal, Beira" }
+      ],
+      documents: [
+        { number: "FT 2026/084", client: "Mercado Central Maputo", type: "Factura", date: "2026-06-05", status: "Pago", items: makeItems("Fornecimento de paes e bolos", 212068.97), net: 212068.97, vat: 33931.03, total: 246000 },
+        { number: "FT 2026/083", client: "Cafe Avenida Julius Nyerere", type: "Factura", date: "2026-06-03", status: "Pendente", items: makeItems("Produtos de pastelaria", 63620.69), net: 63620.69, vat: 10179.31, total: 73800 },
+        { number: "RC 2026/042", client: "Hotel Baia da Beira", type: "Recibo", date: "2026-06-02", status: "Pago", items: makeItems("Fornecimento semanal", 159051.72), net: 159051.72, vat: 25448.28, total: 184500 },
+        { number: "FT 2026/079", client: "Cafe Avenida Julius Nyerere", type: "Factura", date: "2026-05-28", status: "Vencido", items: makeItems("Encomenda mensal", 50896.55), net: 50896.55, vat: 8143.45, total: 59040 }
+      ],
+      users: [
+        { name: "Armando Tembe", email: "armando@padaria.co.mz", role: "Administrador", status: "Activo", lastAccess: "2026-06-06" },
+        { name: "Elsa Mucavele", email: "elsa@padaria.co.mz", role: "Contabilista", status: "Activo", lastAccess: "2026-06-05" }
+      ]
+    },
+    {
+      name: "Clinica Matola Saude, Lda.",
+      nuit: "401220775",
+      address: "Av. Uniao Africana, Matola",
+      plan: "Essencial",
+      status: "Activa",
+      modules: ["Facturacao", "Recibos", "IVA"],
+      monthly: 7000,
+      clients: [
+        { name: "Empresa Transportes Matola", nuit: "503880119", city: "Matola", address: "EN4, Matola" },
+        { name: "Escola Kaya", nuit: "504119002", city: "Matola", address: "Bairro Fomento, Matola" }
+      ],
+      documents: [
+        { number: "FT 2026/021", client: "Empresa Transportes Matola", type: "Factura", date: "2026-06-04", status: "Pendente", items: makeItems("Servicos clinicos", 86206.9), net: 86206.9, vat: 13793.1, total: 100000 },
+        { number: "RC 2026/014", client: "Escola Kaya", type: "Recibo", date: "2026-06-01", status: "Pago", items: makeItems("Consultas e exames", 43103.45), net: 43103.45, vat: 6896.55, total: 50000 }
+      ],
+      users: [
+        { name: "Marta Langa", email: "marta@clinica.co.mz", role: "Administrador", status: "Activo", lastAccess: "2026-06-04" }
+      ]
+    },
+    {
+      name: "Hotel Baia da Beira, SA",
+      nuit: "402112390",
+      address: "Av. Marginal, Beira",
+      plan: "Profissional",
+      status: "Suspensa",
+      modules: ["Facturacao", "Recibos", "IVA", "Relatorios", "Utilizadores"],
+      monthly: 14000,
+      clients: [{ name: "Agencia Turismo Sofala", nuit: "505882001", city: "Beira", address: "Rua Correia de Brito, Beira" }],
+      documents: [],
+      users: [
+        { name: "Joao Chissano", email: "joao@hotel.co.mz", role: "Administrador", status: "Bloqueado", lastAccess: "2026-05-29" }
+      ]
+    }
+  ]
+};
+
+let state = loadState();
+let loginRole = "company";
+let currentRole = null;
+let activeCompany = state.companies[0];
+let selectedDocumentNumber = null;
+
+const formatter = new Intl.NumberFormat("pt-MZ", {
+  style: "currency",
+  currency: "MZN",
+  currencyDisplay: "narrowSymbol"
+});
+
+const amountFormatter = new Intl.NumberFormat("pt-MZ", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+});
+
+const authScreen = document.querySelector("#authScreen");
+const appShell = document.querySelector("#appShell");
+const loginForm = document.querySelector("#loginForm");
+const loginIdentity = document.querySelector("#loginIdentity");
+const identityLabel = document.querySelector("#identityLabel");
+const activeCompanyName = document.querySelector("#activeCompanyName");
+const accountPill = document.querySelector("#accountPill");
+const planName = document.querySelector("#planName");
+const licenseRows = document.querySelector("#licenseRows");
+const clientCards = document.querySelector("#clientCards");
+const rows = document.querySelector("#documentRows");
+const search = document.querySelector("#documentSearch");
+const statusFilter = document.querySelector("#statusFilter");
+const userRows = document.querySelector("#userRows");
+const userSearch = document.querySelector("#userSearch");
+const userStatusFilter = document.querySelector("#userStatusFilter");
+const dialog = document.querySelector("#documentDialog");
+const documentDetailsDialog = document.querySelector("#documentDetailsDialog");
+const clientDialog = document.querySelector("#clientDialog");
+const companyDialog = document.querySelector("#companyDialog");
+const userDialog = document.querySelector("#userDialog");
+const dialogTitle = document.querySelector("#dialogTitle");
+const typeInput = document.querySelector("#typeInput");
+const lineItems = document.querySelector("#lineItems");
+const previewSubtotal = document.querySelector("#previewSubtotal");
+const previewVat = document.querySelector("#previewVat");
+const previewTotal = document.querySelector("#previewTotal");
+const clientInput = document.querySelector("#clientInput");
+const detailsTitle = document.querySelector("#detailsTitle");
+const detailsSummary = document.querySelector("#detailsSummary");
+const detailsItemRows = document.querySelector("#detailsItemRows");
+const detailsSubtotal = document.querySelector("#detailsSubtotal");
+const detailsVat = document.querySelector("#detailsVat");
+const detailsTotal = document.querySelector("#detailsTotal");
+const downloadPdfButton = document.querySelector("#downloadPdfButton");
+const toast = document.querySelector("#toast");
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : structuredClone(seedState);
+  } catch {
+    return structuredClone(seedState);
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function normalizeDocuments() {
+  state.companies.forEach((company) => {
+    if (!company.address) {
+      company.address = "Mocambique";
+    }
+    if (!Array.isArray(company.users)) {
+      company.users = [
+        {
+          name: "Administrador",
+          email: `admin@${company.nuit}.co.mz`,
+          role: "Administrador",
+          status: "Activo",
+          lastAccess: "-"
+        }
+      ];
+    }
+    company.clients.forEach((client) => {
+      if (!client.address) {
+        client.address = client.city ? `${client.city}, Mocambique` : "Mocambique";
+      }
+    });
+    company.documents.forEach((documentItem) => {
+      if (!Array.isArray(documentItem.items)) {
+        documentItem.items = makeItems("Item do documento", Number(documentItem.net || 0));
+      }
+      const totals = calculateDocumentTotals(documentItem.items);
+      documentItem.net = totals.net;
+      documentItem.vat = totals.vat;
+      documentItem.total = totals.total;
+    });
+  });
+}
+
+function formatMoney(value) {
+  return formatter.format(value || 0);
+}
+
+function formatPdfAmount(value) {
+  return amountFormatter.format(Number(value || 0));
+}
+
+function calculateDocumentTotals(items) {
+  return items.reduce(
+    (totals, item) => {
+      const quantity = Number(item.quantity || 0);
+      const unitPrice = Number(item.unitPrice || 0);
+      const vatRate = Number(item.vatRate || 0);
+      const net = quantity * unitPrice;
+      const vat = net * (vatRate / 100);
+      totals.net += net;
+      totals.vat += vat;
+      totals.total += net + vat;
+      return totals;
+    },
+    { net: 0, vat: 0, total: 0 }
+  );
+}
+
+function hasModule(moduleName) {
+  return currentRole === "admin" || activeCompany.modules.includes(moduleName);
+}
+
+function findClientByName(name) {
+  return activeCompany.clients.find((client) => client.name === name) || {
+    name,
+    nuit: "-",
+    address: "-"
+  };
+}
+
+function statusClass(status) {
+  if (status === "Pago") return "paid";
+  if (status === "Vencido") return "overdue";
+  return "pending";
+}
+
+function nextNumber(type) {
+  const prefix = type === "Recibo" ? "RC" : "FT";
+  const count = activeCompany.documents.filter((item) => item.type === type).length + 1;
+  return `${prefix} 2026/${String(count).padStart(3, "0")}`;
+}
+
+function setView(viewId) {
+  if (viewId === "reports" && !hasModule("Relatorios")) {
+    showToast("Modulo de relatorios bloqueado nesta licenca.");
+    return;
+  }
+  if (viewId === "users" && !hasModule("Utilizadores")) {
+    showToast("Modulo de utilizadores bloqueado nesta licenca.");
+    return;
+  }
+
+  document.querySelectorAll(".view").forEach((view) => {
+    view.classList.toggle("active", view.id === viewId);
+  });
+
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.classList.toggle("active", item.dataset.view === viewId);
+  });
+}
+
+function renderDashboard() {
+  const docs = activeCompany.documents;
+  const invoices = docs.filter((item) => item.type === "Factura");
+  const receipts = docs.filter((item) => item.type === "Recibo");
+  const revenue = invoices.reduce((sum, item) => sum + item.total, 0);
+  const vat = docs.reduce((sum, item) => sum + item.vat, 0);
+  const receivable = invoices
+    .filter((item) => item.status !== "Pago")
+    .reduce((sum, item) => sum + item.total, 0);
+
+  document.querySelector("#metricRevenue").textContent = formatMoney(revenue);
+  document.querySelector("#metricVat").textContent = formatMoney(vat);
+  document.querySelector("#metricReceivable").textContent = formatMoney(receivable);
+  document.querySelector("#metricReceipts").textContent = receipts.length;
+  document.querySelector("#metricRevenueNote").textContent = `${invoices.length} facturas emitidas`;
+  document.querySelector("#metricReceivableNote").textContent = `${invoices.filter((item) => item.status !== "Pago").length} por regularizar`;
+  document.querySelector("#metricReceiptNote").textContent = receipts[0] ? `Ultimo recibo: ${receipts[0].number}` : "Sem recibos emitidos";
+}
+
+function renderDocuments() {
+  const query = search.value.trim().toLowerCase();
+  const selectedStatus = statusFilter.value;
+  const filtered = activeCompany.documents.filter((item) => {
+    const matchesQuery = [item.number, item.client, item.type, item.status].join(" ").toLowerCase().includes(query);
+    const matchesStatus = selectedStatus === "all" || item.status === selectedStatus;
+    return matchesQuery && matchesStatus;
+  });
+
+  rows.innerHTML = filtered.map((item) => `
+    <tr>
+      <td><strong>${item.number}</strong></td>
+      <td>${item.client}</td>
+      <td>${item.type}</td>
+      <td>${item.items.length}</td>
+      <td>${new Date(item.date).toLocaleDateString("pt-MZ")}</td>
+      <td><span class="badge ${statusClass(item.status)}">${item.status}</span></td>
+      <td class="numeric">${formatMoney(item.total)}</td>
+      <td>
+        <div class="row-actions">
+          <button type="button" data-action="view-document" data-number="${item.number}">Ver</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function openDocumentDetails(number) {
+  const documentItem = activeCompany.documents.find((item) => item.number === number);
+  if (!documentItem) return;
+
+  selectedDocumentNumber = number;
+  const client = findClientByName(documentItem.client);
+  const totals = calculateDocumentTotals(documentItem.items);
+  detailsTitle.textContent = `${documentItem.type} ${documentItem.number}`;
+  detailsSummary.innerHTML = `
+    <div><span>Cliente</span><strong>${documentItem.client}</strong></div>
+    <div><span>NUIT</span><strong>${client.nuit}</strong></div>
+    <div><span>Endereco</span><strong>${client.address}</strong></div>
+    <div><span>Data</span><strong>${new Date(documentItem.date).toLocaleDateString("pt-MZ")}</strong></div>
+    <div><span>Estado</span><strong>${documentItem.status}</strong></div>
+    <div><span>Itens</span><strong>${documentItem.items.length}</strong></div>
+  `;
+  detailsItemRows.innerHTML = documentItem.items.map((item) => {
+    const net = Number(item.quantity || 0) * Number(item.unitPrice || 0);
+    return `
+      <tr>
+        <td>${item.description}</td>
+        <td class="numeric">${item.quantity}</td>
+        <td class="numeric">${formatMoney(item.unitPrice)}</td>
+        <td class="numeric">${Number(item.vatRate || 0)}% · ${formatMoney(net * (Number(item.vatRate || 0) / 100))}</td>
+        <td class="numeric">${formatMoney(net + net * (Number(item.vatRate || 0) / 100))}</td>
+      </tr>
+    `;
+  }).join("");
+  detailsSubtotal.textContent = formatMoney(totals.net);
+  detailsVat.textContent = formatMoney(totals.vat);
+  detailsTotal.textContent = formatMoney(totals.total);
+  documentDetailsDialog.showModal();
+}
+
+function renderClients() {
+  clientCards.innerHTML = activeCompany.clients.map((client) => {
+    const total = activeCompany.documents
+      .filter((item) => item.client === client.name)
+      .reduce((sum, item) => sum + item.total, 0);
+    return `
+      <article class="client-card">
+        <strong>${client.name}</strong>
+        <span>NUIT ${client.nuit}</span>
+        <small>${client.address}</small>
+        <small>${formatMoney(total)} facturados</small>
+      </article>
+    `;
+  }).join("");
+
+  clientInput.innerHTML = activeCompany.clients
+    .map((client) => `<option>${client.name}</option>`)
+    .join("");
+}
+
+function renderReports() {
+  const overdue = activeCompany.documents.filter((item) => item.status === "Vencido").length;
+  const clientCount = activeCompany.clients.length;
+  document.querySelector("#vatReportStatus").textContent = hasModule("IVA") ? "Pronto" : "Bloqueado";
+  document.querySelector("#clientSalesStatus").textContent = `${clientCount} clientes`;
+  document.querySelector("#overdueStatus").textContent = `${overdue} itens`;
+}
+
+function renderUsers() {
+  const query = userSearch.value.trim().toLowerCase();
+  const selectedStatus = userStatusFilter.value;
+  const filtered = activeCompany.users.filter((user) => {
+    const matchesQuery = [user.name, user.email, user.role, user.status].join(" ").toLowerCase().includes(query);
+    const matchesStatus = selectedStatus === "all" || user.status === selectedStatus;
+    return matchesQuery && matchesStatus;
+  });
+
+  userRows.innerHTML = filtered.map((user) => `
+    <tr>
+      <td><strong>${user.name}</strong></td>
+      <td>${user.email}</td>
+      <td>${user.role}</td>
+      <td><span class="badge ${user.status === "Activo" ? "paid" : "overdue"}">${user.status}</span></td>
+      <td>${user.lastAccess}</td>
+      <td>
+        <div class="row-actions">
+          <button type="button" data-action="toggle-user" data-email="${user.email}">${user.status === "Activo" ? "Bloquear" : "Activar"}</button>
+          <button type="button" data-action="promote-user" data-email="${user.email}">Função</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderLicenses() {
+  const active = state.companies.filter((item) => item.status === "Activa").length;
+  const suspended = state.companies.filter((item) => item.status === "Suspensa").length;
+  const monthly = state.companies
+    .filter((item) => item.status === "Activa")
+    .reduce((sum, item) => sum + Number(item.monthly || 0), 0);
+
+  document.querySelectorAll("#admin .metric strong")[0].textContent = active;
+  document.querySelectorAll("#admin .metric strong")[1].textContent = formatMoney(monthly);
+  document.querySelectorAll("#admin .metric strong")[2].textContent = suspended;
+
+  licenseRows.innerHTML = state.companies.map((company) => `
+    <tr>
+      <td><strong>${company.name}</strong></td>
+      <td>${company.nuit}</td>
+      <td>${company.plan}</td>
+      <td><button class="license-toggle ${company.status === "Activa" ? "enabled" : "disabled"}" type="button" data-action="toggle-license" data-nuit="${company.nuit}">${company.status}</button></td>
+      <td>${company.modules.join(", ")}</td>
+      <td class="numeric">${formatMoney(company.monthly)}</td>
+      <td>
+        <div class="row-actions">
+          <button type="button" data-action="view-company" data-nuit="${company.nuit}">Entrar</button>
+          <button type="button" data-action="toggle-reports" data-nuit="${company.nuit}">Relatorios</button>
+          <button type="button" data-action="upgrade-plan" data-nuit="${company.nuit}">Plano</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderModuleLocks() {
+  document.querySelector('[data-view="reports"]').classList.toggle("locked-feature", !hasModule("Relatorios"));
+  document.querySelector('[data-view="users"]').classList.toggle("locked-feature", !hasModule("Utilizadores"));
+  document.querySelector("#newReceiptButton").classList.toggle("locked-feature", !hasModule("Recibos"));
+}
+
+function renderAll() {
+  renderDashboard();
+  renderDocuments();
+  renderClients();
+  renderReports();
+  renderUsers();
+  renderLicenses();
+  renderModuleLocks();
+}
+
+function applySession(role, company = state.companies[0]) {
+  if (role === "company" && company.status !== "Activa") {
+    showToast("Esta licenca esta suspensa. Contacte o administrador.");
+    return;
+  }
+
+  currentRole = role;
+  activeCompany = company;
+  authScreen.classList.add("is-hidden");
+  appShell.classList.remove("is-locked");
+  activeCompanyName.textContent = role === "admin" ? "Admin ContaFacil MZ" : company.name;
+  accountPill.textContent = role === "admin" ? "Administrador" : `NUIT ${company.nuit}`;
+  planName.textContent = role === "admin" ? "Gestao SaaS" : company.plan;
+
+  document.querySelector(".admin-nav").hidden = role !== "admin";
+  document.querySelector("#newInvoiceButton").hidden = role === "admin";
+  document.querySelector("#exportButton").hidden = role === "admin";
+  document.querySelector("#newReceiptButton").hidden = role === "admin";
+  renderAll();
+  setView(role === "admin" ? "admin" : "dashboard");
+  showToast(role === "admin" ? "Sessao admin iniciada." : `Sessao iniciada para ${company.name}.`);
+}
+
+function updateLoginRole(role) {
+  loginRole = role;
+  document.querySelectorAll("[data-login-role]").forEach((button) => {
+    button.classList.toggle("selected", button.dataset.loginRole === role);
+  });
+  identityLabel.textContent = role === "admin" ? "Email do administrador" : "NUIT da empresa";
+  loginIdentity.value = role === "admin" ? "admin@contafacilmz.co.mz" : "400884112";
+}
+
+function addLineItemRow(item = { description: "Produto ou servico", quantity: 1, unitPrice: 120000, vatRate: VAT_RATE }) {
+  const row = document.createElement("div");
+  row.className = "line-item-row";
+  row.innerHTML = `
+    <label>
+      <span>Descricao</span>
+      <input class="line-description" type="text" value="${item.description || ""}">
+    </label>
+    <label>
+      <span>Qtd.</span>
+      <input class="line-quantity" type="number" min="0" step="1" value="${item.quantity || 1}">
+    </label>
+    <label>
+      <span>Preco unit.</span>
+      <input class="line-unit-price" type="number" min="0" step="0.01" value="${item.unitPrice || 0}">
+    </label>
+    <label>
+      <span>IVA</span>
+      <select class="line-vat-rate">
+        <option value="16" ${Number(item.vatRate) === 16 ? "selected" : ""}>16%</option>
+        <option value="0" ${Number(item.vatRate) === 0 ? "selected" : ""}>Isento</option>
+      </select>
+    </label>
+    <button class="remove-line-item" type="button" aria-label="Remover item">x</button>
+  `;
+  lineItems.append(row);
+  updatePreviewTotal();
+}
+
+function getLineItems() {
+  return [...lineItems.querySelectorAll(".line-item-row")]
+    .map((row) => ({
+      description: row.querySelector(".line-description").value.trim() || "Item",
+      quantity: Number(row.querySelector(".line-quantity").value || 0),
+      unitPrice: Number(row.querySelector(".line-unit-price").value || 0),
+      vatRate: Number(row.querySelector(".line-vat-rate").value || 0)
+    }))
+    .filter((item) => item.quantity > 0 && item.unitPrice >= 0)
+    .map((item) => {
+      const net = item.quantity * item.unitPrice;
+      const vat = net * (item.vatRate / 100);
+      return { ...item, vat, total: net + vat };
+    });
+}
+
+function updatePreviewTotal() {
+  const totals = calculateDocumentTotals(getLineItems());
+  previewSubtotal.textContent = formatMoney(totals.net);
+  previewVat.textContent = formatMoney(totals.vat);
+  previewTotal.textContent = formatMoney(totals.total);
+}
+
+function openDocumentDialog(type) {
+  if (type === "Recibo" && !hasModule("Recibos")) {
+    showToast("Modulo de recibos bloqueado nesta licenca.");
+    return;
+  }
+  typeInput.value = type;
+  dialogTitle.textContent = type === "Recibo" ? "Novo recibo" : "Nova factura";
+  lineItems.innerHTML = "";
+  addLineItemRow({ description: "Produto ou servico", quantity: 1, unitPrice: 120000, vatRate: VAT_RATE });
+  updatePreviewTotal();
+  dialog.showModal();
+}
+
+function exportCurrentData() {
+  const payload = {
+    company: activeCompany.name,
+    nuit: activeCompany.nuit,
+    generatedAt: new Date().toISOString(),
+    documents: activeCompany.documents,
+    clients: activeCompany.clients
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${activeCompany.nuit}-export.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast("Exportacao criada em JSON.");
+}
+
+function cleanPdfText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function pdfEscape(value) {
+  return cleanPdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function wrapText(text, maxChars) {
+  const words = cleanPdfText(text).split(" ");
+  const lines = [];
+  let line = "";
+  words.forEach((word) => {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > maxChars && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  });
+  if (line) lines.push(line);
+  return lines;
+}
+
+function amountInWords(value) {
+  const units = ["", "um", "dois", "tres", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+  const teens = ["dez", "onze", "doze", "treze", "catorze", "quinze", "dezasseis", "dezassete", "dezoito", "dezanove"];
+  const tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+  const hundreds = ["", "cento", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"];
+
+  function underThousand(number) {
+    if (number === 0) return "";
+    if (number === 100) return "cem";
+
+    const parts = [];
+    const hundred = Math.floor(number / 100);
+    const rest = number % 100;
+
+    if (hundred) parts.push(hundreds[hundred]);
+    if (rest >= 10 && rest < 20) {
+      parts.push(teens[rest - 10]);
+    } else {
+      const ten = Math.floor(rest / 10);
+      const unit = rest % 10;
+      if (ten) parts.push(tens[ten]);
+      if (unit) parts.push(units[unit]);
+    }
+
+    return parts.join(" e ");
+  }
+
+  function integerToWords(number) {
+    if (number === 0) return "zero";
+
+    const millions = Math.floor(number / 1000000);
+    const thousands = Math.floor((number % 1000000) / 1000);
+    const rest = number % 1000;
+    const parts = [];
+
+    if (millions) {
+      parts.push(millions === 1 ? "um milhao" : `${underThousand(millions)} milhoes`);
+    }
+    if (thousands) {
+      parts.push(thousands === 1 ? "mil" : `${underThousand(thousands)} mil`);
+    }
+    if (rest) {
+      const connector = parts.length && rest < 100 ? "e " : "";
+      parts.push(`${connector}${underThousand(rest)}`);
+    }
+
+    return parts.join(", ").replace(", e ", " e ");
+  }
+
+  const amount = Math.round(Number(value || 0) * 100);
+  const meticais = Math.floor(amount / 100);
+  const centavos = amount % 100;
+  const meticalText = meticais === 1 ? "metical" : "meticais";
+  const main = `${integerToWords(meticais)} ${meticalText}`;
+
+  if (!centavos) return main;
+  const centavoText = centavos === 1 ? "centavo" : "centavos";
+  return `${main} e ${integerToWords(centavos)} ${centavoText}`;
+}
+
+function buildPdf(objects, content) {
+  const addObject = (body) => {
+    objects.push(body);
+    return objects.length;
+  };
+
+  const contentId = addObject(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  const fontId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  const boldFontId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  const pageId = addObject(`<< /Type /Page /Parent 0 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontId} 0 R /F2 ${boldFontId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+  const pagesId = addObject(`<< /Type /Pages /Kids [${pageId} 0 R] /Count 1 >>`);
+  objects[pageId - 1] = objects[pageId - 1].replace("/Parent 0 0 R", `/Parent ${pagesId} 0 R`);
+  const catalogId = addObject(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((body, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return pdf;
+}
+
+function createInvoicePdf(documentItem) {
+  const totals = calculateDocumentTotals(documentItem.items);
+  const client = findClientByName(documentItem.client);
+  const content = [];
+  const text = (x, y, value, size = 9, font = "F1") => {
+    content.push(`BT /${font} ${size} Tf ${x} ${y} Td (${pdfEscape(value)}) Tj ET`);
+  };
+  const textRight = (x, y, value, size = 9, font = "F1") => {
+    const clean = cleanPdfText(value);
+    const approxWidth = clean.length * size * 0.48;
+    text(x - approxWidth, y, clean, size, font);
+  };
+  const line = (x1, y1, x2, y2) => {
+    content.push(`${x1} ${y1} m ${x2} ${y2} l S`);
+  };
+  const rect = (x, y, w, h) => {
+    content.push(`${x} ${y} ${w} ${h} re S`);
+  };
+  const fillRect = (x, y, w, h, color = "0.95 0.97 0.94") => {
+    content.push(`q ${color} rg ${x} ${y} ${w} ${h} re f Q`);
+  };
+  const strokeColor = (color = "0.82 0.86 0.82") => {
+    content.push(`${color} RG`);
+  };
+
+  content.push("0.2 w");
+  rect(36, 768, 523, 60);
+  line(390, 768, 390, 828);
+  text(48, 808, activeCompany.name, 12, "F2");
+  text(48, 790, activeCompany.address, 8);
+  text(48, 776, `NUIT: ${activeCompany.nuit}`, 8);
+  text(410, 818, "ORIGINAL", 9, "F2");
+  text(410, 804, documentItem.type.toUpperCase(), 16, "F2");
+  text(410, 786, documentItem.number, 11, "F2");
+  text(410, 773, `Emitido em ${new Date(documentItem.date).toLocaleDateString("pt-MZ")}`, 8);
+
+  strokeColor();
+  rect(36, 652, 325, 72);
+  text(50, 704, "CLIENTE", 8, "F2");
+  text(50, 687, client.name, 12, "F2");
+  text(50, 670, `NUIT: ${client.nuit}`, 9);
+  wrapText(client.address, 46).slice(0, 2).forEach((lineText, index) => {
+    text(50, 656 - index * 11, `Endereco: ${index ? "" : lineText}`, 8);
+    if (index) text(93, 656 - index * 11, lineText, 8);
+  });
+
+  rect(380, 652, 179, 72);
+  text(394, 704, "DADOS DO DOCUMENTO", 8, "F2");
+  text(394, 686, "D. Emissao", 8, "F2");
+  textRight(548, 686, new Date(documentItem.date).toLocaleDateString("pt-MZ"), 9);
+  text(394, 668, "D. Vencimento", 8, "F2");
+  textRight(548, 668, new Date(documentItem.date).toLocaleDateString("pt-MZ"), 9);
+
+  rect(36, 568, 523, 30);
+  text(46, 580, "Ref.", 8, "F2");
+  text(94, 580, "Descricao", 8, "F2");
+  textRight(315, 580, "Qtd.", 8, "F2");
+  textRight(395, 580, "Preco", 8, "F2");
+  textRight(445, 580, "IVA", 8, "F2");
+  textRight(500, 580, "Incl.", 8, "F2");
+  textRight(548, 580, "Total", 8, "F2");
+
+  let y = 548;
+  documentItem.items.forEach((item, index) => {
+    const net = Number(item.quantity || 0) * Number(item.unitPrice || 0);
+    const total = net + net * (Number(item.vatRate || 0) / 100);
+    text(46, y, `${index + 1}`, 8);
+    wrapText(item.description, 34).slice(0, 2).forEach((descriptionLine, offset) => {
+      text(94, y - offset * 11, descriptionLine, 8);
+    });
+    textRight(315, y, item.quantity, 8);
+    textRight(395, y, formatPdfAmount(item.unitPrice), 8);
+    textRight(445, y, `${item.vatRate}%`, 8);
+    textRight(500, y, "Sim", 8);
+    textRight(548, y, formatPdfAmount(total), 8);
+    y -= 28;
+  });
+
+  strokeColor();
+  line(36, y + 16, 559, y + 16);
+  const totalY = Math.min(y - 10, 392);
+  rect(332, totalY - 126, 227, 126);
+  text(346, totalY - 22, "Subtotal", 9);
+  textRight(548, totalY - 22, formatPdfAmount(totals.net), 9, "F2");
+  text(346, totalY - 42, "Desconto financeiro", 9);
+  textRight(548, totalY - 42, "0,00", 9);
+  text(346, totalY - 62, "Base de incidencia", 9);
+  textRight(548, totalY - 62, formatPdfAmount(totals.net), 9, "F2");
+  text(346, totalY - 82, "IVA", 9);
+  textRight(548, totalY - 82, formatPdfAmount(totals.vat), 9, "F2");
+  line(332, totalY - 96, 559, totalY - 96);
+  text(346, totalY - 116, "TOTAL (MZN)", 10, "F2");
+  textRight(548, totalY - 116, formatPdfAmount(totals.total), 11, "F2");
+
+  const extensoY = totalY - 150;
+  rect(36, extensoY - 20, 523, 34);
+  text(48, extensoY - 2, `Extenso: ${amountInWords(totals.total)}`, 8, "F2");
+
+  rect(36, 86, 523, 84);
+  line(36, 142, 559, 142);
+  line(36, 112, 559, 112);
+  line(210, 112, 210, 142);
+  line(385, 112, 385, 142);
+  text(48, 154, "Dados bancarios", 10, "F2");
+  text(48, 126, "Banco", 8, "F2");
+  text(48, 116, "Moza Banco", 8);
+  text(222, 126, "Conta", 8, "F2");
+  text(222, 116, "007607676101", 8);
+  text(397, 126, "SWIFT", 8, "F2");
+  text(397, 116, "MOZAMZMAXXX", 8);
+  text(48, 96, "NIB", 8, "F2");
+  text(92, 96, "0034.0000.07607676.101.11", 8);
+  line(36, 58, 559, 58);
+  text(40, 36, `Documento processado por Computador. Software licenciado a: ${activeCompany.name}.`, 7);
+  text(40, 22, "Documento gerado pelo ContaFacil MZ.", 7);
+
+  return buildPdf([], content.join("\n"));
+}
+
+function downloadDocumentPdf(number = selectedDocumentNumber) {
+  const documentItem = activeCompany.documents.find((item) => item.number === number);
+  if (!documentItem) {
+    showToast("Documento nao encontrado.");
+    return;
+  }
+  const pdf = createInvoicePdf(documentItem);
+  const blob = new Blob([pdf], { type: "application/pdf" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${documentItem.number.replace(/[\\/]/g, "-")}.pdf`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast("PDF da factura gerado.");
+}
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add("show");
+  window.setTimeout(() => toast.classList.remove("show"), 2800);
+}
+
+document.querySelectorAll("[data-view]").forEach((button) => {
+  button.addEventListener("click", () => setView(button.dataset.view));
+});
+
+document.querySelectorAll("[data-view-shortcut]").forEach((button) => {
+  button.addEventListener("click", () => setView(button.dataset.viewShortcut));
+});
+
+document.querySelectorAll("[data-login-role]").forEach((button) => {
+  button.addEventListener("click", () => updateLoginRole(button.dataset.loginRole));
+});
+
+document.querySelectorAll("[data-demo-login]").forEach((button) => {
+  button.addEventListener("click", () => {
+    updateLoginRole(button.dataset.demoLogin);
+    applySession(button.dataset.demoLogin, state.companies[0]);
+  });
+});
+
+loginForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (loginRole === "admin") {
+    applySession("admin");
+    return;
+  }
+  const company = state.companies.find((item) => item.nuit === loginIdentity.value.trim());
+  if (!company) {
+    showToast("NUIT nao encontrado.");
+    return;
+  }
+  applySession("company", company);
+});
+
+document.querySelector("#newInvoiceButton").addEventListener("click", () => openDocumentDialog("Factura"));
+document.querySelector("#newReceiptButton").addEventListener("click", () => openDocumentDialog("Recibo"));
+document.querySelector("#exportButton").addEventListener("click", exportCurrentData);
+downloadPdfButton.addEventListener("click", () => downloadDocumentPdf());
+document.querySelector("#logoutButton").addEventListener("click", () => {
+  appShell.classList.add("is-locked");
+  authScreen.classList.remove("is-hidden");
+  currentRole = null;
+  showToast("Sessao terminada.");
+});
+document.querySelector("#newCompanyButton").addEventListener("click", () => companyDialog.showModal());
+document.querySelector("#newClientButton").addEventListener("click", () => clientDialog.showModal());
+document.querySelector("#newUserButton").addEventListener("click", () => {
+  if (!hasModule("Utilizadores")) {
+    showToast("Modulo de utilizadores bloqueado nesta licenca.");
+    return;
+  }
+  userDialog.showModal();
+});
+document.querySelector("#prepareVatButton").addEventListener("click", () => {
+  const vat = activeCompany.documents.reduce((sum, item) => sum + item.vat, 0);
+  showToast(`Mapa de IVA preparado: ${formatMoney(vat)} de IVA liquidado.`);
+});
+document.querySelector("#vatReportButton").addEventListener("click", () => {
+  if (!hasModule("IVA")) {
+    showToast("Modulo de IVA bloqueado nesta licenca.");
+    return;
+  }
+  setView("reports");
+  showToast("Relatorio de IVA pronto para revisao.");
+});
+
+search.addEventListener("input", renderDocuments);
+statusFilter.addEventListener("change", renderDocuments);
+userSearch.addEventListener("input", renderUsers);
+userStatusFilter.addEventListener("change", renderUsers);
+rows.addEventListener("click", (event) => {
+  const button = event.target.closest('[data-action="view-document"]');
+  if (!button) return;
+  openDocumentDetails(button.dataset.number);
+});
+document.querySelector("#addLineItemButton").addEventListener("click", () => {
+  addLineItemRow({ description: "Novo item", quantity: 1, unitPrice: 0, vatRate: VAT_RATE });
+});
+lineItems.addEventListener("input", updatePreviewTotal);
+lineItems.addEventListener("change", updatePreviewTotal);
+lineItems.addEventListener("click", (event) => {
+  const button = event.target.closest(".remove-line-item");
+  if (!button) return;
+  if (lineItems.querySelectorAll(".line-item-row").length === 1) {
+    showToast("O documento precisa de pelo menos um item.");
+    return;
+  }
+  button.closest(".line-item-row").remove();
+  updatePreviewTotal();
+});
+
+document.querySelector("#createDocumentButton").addEventListener("click", () => {
+  const type = typeInput.value;
+  const items = getLineItems();
+  const totals = calculateDocumentTotals(items);
+  if (!items.length || totals.total <= 0) {
+    showToast("Adicione pelo menos um item com valor.");
+    return;
+  }
+  activeCompany.documents.unshift({
+    number: nextNumber(type),
+    client: clientInput.value,
+    type,
+    date: new Date().toISOString().slice(0, 10),
+    status: type === "Recibo" ? "Pago" : "Pendente",
+    items,
+    net: totals.net,
+    vat: totals.vat,
+    total: totals.total
+  });
+  saveState();
+  renderAll();
+  setView("documents");
+  showToast(`${type} emitido com sucesso.`);
+});
+
+document.querySelector("#createClientButton").addEventListener("click", () => {
+  activeCompany.clients.push({
+    name: document.querySelector("#clientNameInput").value.trim(),
+    nuit: document.querySelector("#clientNuitInput").value.trim(),
+    city: document.querySelector("#clientCityInput").value.trim(),
+    address: document.querySelector("#clientAddressInput").value.trim()
+  });
+  saveState();
+  renderAll();
+  setView("clients");
+  showToast("Cliente criado.");
+});
+
+document.querySelector("#createUserButton").addEventListener("click", () => {
+  activeCompany.users.push({
+    name: document.querySelector("#userNameInput").value.trim(),
+    email: document.querySelector("#userEmailInput").value.trim(),
+    role: document.querySelector("#userRoleInput").value,
+    status: document.querySelector("#userStatusInput").value,
+    lastAccess: "-"
+  });
+  saveState();
+  renderAll();
+  setView("users");
+  showToast("Utilizador criado.");
+});
+
+userRows.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const user = activeCompany.users.find((item) => item.email === button.dataset.email);
+  if (!user) return;
+
+  if (button.dataset.action === "toggle-user") {
+    user.status = user.status === "Activo" ? "Bloqueado" : "Activo";
+    showToast(`${user.name}: estado actualizado.`);
+  }
+
+  if (button.dataset.action === "promote-user") {
+    const roles = ["Administrador", "Contabilista", "Operador", "Consulta"];
+    user.role = roles[(roles.indexOf(user.role) + 1) % roles.length];
+    showToast(`${user.name}: funcao alterada para ${user.role}.`);
+  }
+
+  saveState();
+  renderUsers();
+});
+
+document.querySelector("#createCompanyButton").addEventListener("click", () => {
+  const modules = [...companyDialog.querySelectorAll(".module-fieldset input:checked")].map((input) => input.value);
+  state.companies.push({
+    name: document.querySelector("#companyNameInput").value.trim(),
+    nuit: document.querySelector("#companyNuitInput").value.trim(),
+    address: document.querySelector("#companyAddressInput").value.trim(),
+    plan: document.querySelector("#companyPlanInput").value,
+    status: "Activa",
+    modules,
+    monthly: Number(document.querySelector("#companyMonthlyInput").value || 0),
+    clients: [],
+    documents: [],
+    users: [
+      {
+        name: "Administrador",
+        email: `admin@${document.querySelector("#companyNuitInput").value.trim()}.co.mz`,
+        role: "Administrador",
+        status: "Activo",
+        lastAccess: "-"
+      }
+    ]
+  });
+  saveState();
+  renderAll();
+  showToast("Nova licenca criada.");
+});
+
+licenseRows.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const company = state.companies.find((item) => item.nuit === button.dataset.nuit);
+  if (!company) return;
+
+  if (button.dataset.action === "toggle-license") {
+    company.status = company.status === "Activa" ? "Suspensa" : "Activa";
+    showToast(`${company.name}: licenca ${company.status.toLowerCase()}.`);
+  }
+
+  if (button.dataset.action === "toggle-reports") {
+    company.modules = company.modules.includes("Relatorios")
+      ? company.modules.filter((item) => item !== "Relatorios")
+      : [...company.modules, "Relatorios"];
+    showToast(`${company.name}: modulo Relatorios actualizado.`);
+  }
+
+  if (button.dataset.action === "upgrade-plan") {
+    const plans = ["Essencial", "Profissional", "Enterprise"];
+    const next = plans[(plans.indexOf(company.plan) + 1) % plans.length];
+    company.plan = next;
+    company.monthly = next === "Essencial" ? 7000 : next === "Profissional" ? 12500 : 25000;
+    showToast(`${company.name}: plano alterado para ${next}.`);
+  }
+
+  if (button.dataset.action === "view-company") {
+    applySession("company", company);
+  }
+
+  saveState();
+  renderAll();
+});
+
+normalizeDocuments();
+saveState();
+renderAll();
+updatePreviewTotal();
