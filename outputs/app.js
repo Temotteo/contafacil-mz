@@ -16,7 +16,7 @@ const seedState = {
       address: "Av. Marginal, Bairro da Costa do Sol, Maputo",
       plan: "Profissional",
       status: "Activa",
-      modules: ["Facturacao", "Recibos", "IVA", "Relatorios", "Utilizadores"],
+      modules: ["Facturacao", "Recibos", "IVA", "Relatorios", "Utilizadores", "Projectos", "Leads"],
       monthly: 12500,
       clients: [
         { name: "Mercado Central Maputo", nuit: "500884112", city: "Maputo", address: "Av. Guerra Popular, Mercado Central, Maputo", bank: { bankName: "BCI", accountNumber: "1020304050", swift: "CGDIMZMA", nib: "0008.0000.10203040.501.11" } },
@@ -24,14 +24,22 @@ const seedState = {
         { name: "Hotel Baia da Beira", nuit: "502112390", city: "Beira", address: "Av. Marginal, Beira", bank: { bankName: "Moza Banco", accountNumber: "007607676101", swift: "MOZAMZMAXXX", nib: "0034.0000.07607676.101.11" } }
       ],
       documents: [
-        { number: "FT 2026/084", client: "Mercado Central Maputo", type: "Factura", date: "2026-06-05", status: "Pago", items: makeItems("Fornecimento de paes e bolos", 212068.97), net: 212068.97, vat: 33931.03, total: 246000 },
+        { number: "FT 2026/084", client: "Mercado Central Maputo", type: "Factura", date: "2026-06-05", status: "Pago", project: "Expansao Maputo", items: makeItems("Fornecimento de paes e bolos", 212068.97), net: 212068.97, vat: 33931.03, total: 246000 },
         { number: "FT 2026/083", client: "Cafe Avenida Julius Nyerere", type: "Factura", date: "2026-06-03", status: "Pendente", items: makeItems("Produtos de pastelaria", 63620.69), net: 63620.69, vat: 10179.31, total: 73800 },
-        { number: "RC 2026/042", client: "Hotel Baia da Beira", type: "Recibo", date: "2026-06-02", status: "Pago", items: makeItems("Fornecimento semanal", 159051.72), net: 159051.72, vat: 25448.28, total: 184500 },
+        { number: "RC 2026/042", client: "Hotel Baia da Beira", type: "Recibo", date: "2026-06-02", status: "Pago", project: "Contrato Hoteleiro Beira", items: makeItems("Fornecimento semanal", 159051.72), net: 159051.72, vat: 25448.28, total: 184500 },
         { number: "FT 2026/079", client: "Cafe Avenida Julius Nyerere", type: "Factura", date: "2026-05-28", status: "Vencido", items: makeItems("Encomenda mensal", 50896.55), net: 50896.55, vat: 8143.45, total: 59040 }
       ],
       purchases: [
-        { number: "FC 2026/018", supplier: "Moagem Nacional, Lda.", nuit: "600112233", date: "2026-06-04", description: "Farinha de trigo", net: 85000, vatRate: 16, vat: 13600, total: 98600 },
+        { number: "FC 2026/018", supplier: "Moagem Nacional, Lda.", nuit: "600112233", date: "2026-06-04", description: "Farinha de trigo", project: "Expansao Maputo", net: 85000, vatRate: 16, vat: 13600, total: 98600 },
         { number: "FC 2026/019", supplier: "Embalagens Maputo", nuit: "600445778", date: "2026-06-06", description: "Sacos e embalagens", net: 24000, vatRate: 16, vat: 3840, total: 27840 }
+      ],
+      projects: [
+        { name: "Expansao Maputo", client: "Mercado Central Maputo", status: "Activo", budget: 350000 },
+        { name: "Contrato Hoteleiro Beira", client: "Hotel Baia da Beira", status: "Activo", budget: 220000 }
+      ],
+      leads: [
+        { id: "LD-001", name: "Supermercado Costa do Sol", nuit: "507001234", phone: "+258 84 000 0000", source: "Referencia", address: "Costa do Sol, Maputo", status: "Contactado", calls: [{ date: "2026-06-05", outcome: "Pedido de proposta", notes: "Solicitou proposta para fornecimento semanal." }] },
+        { id: "LD-002", name: "Restaurante Baixa", nuit: "507009876", phone: "+258 82 111 2233", source: "Campanha", address: "Baixa, Maputo", status: "Novo", calls: [] }
       ],
       users: [
         { name: "Armando Tembe", email: "armando@padaria.co.mz", role: "Administrador", status: "Activo", lastAccess: "2026-06-06" },
@@ -57,6 +65,12 @@ const seedState = {
       purchases: [
         { number: "FC 2026/007", supplier: "Farmacia Central", nuit: "601002119", date: "2026-06-03", description: "Consumiveis clinicos", net: 32000, vatRate: 16, vat: 5120, total: 37120 }
       ],
+      projects: [
+        { name: "Programa Saude Matola", client: "Empresa Transportes Matola", status: "Activo", budget: 180000 }
+      ],
+      leads: [
+        { id: "LD-001", name: "Clinica Satelite Matola", nuit: "508001119", phone: "+258 86 444 1199", source: "Website", address: "Matola", status: "Novo", calls: [] }
+      ],
       users: [
         { name: "Marta Langa", email: "marta@clinica.co.mz", role: "Administrador", status: "Activo", lastAccess: "2026-06-04" }
       ]
@@ -67,11 +81,13 @@ const seedState = {
       address: "Av. Marginal, Beira",
       plan: "Profissional",
       status: "Suspensa",
-      modules: ["Facturacao", "Recibos", "IVA", "Relatorios", "Utilizadores"],
+      modules: ["Facturacao", "Recibos", "IVA", "Relatorios", "Utilizadores", "Projectos", "Leads"],
       monthly: 14000,
       clients: [{ name: "Agencia Turismo Sofala", nuit: "505882001", city: "Beira", address: "Rua Correia de Brito, Beira", bank: { bankName: "FNB Mocambique", accountNumber: "4411223300", swift: "FIRNMZMX", nib: "0007.0000.44112233.001.11" } }],
       documents: [],
       purchases: [],
+      projects: [],
+      leads: [],
       users: [
         { name: "Joao Chissano", email: "joao@hotel.co.mz", role: "Administrador", status: "Bloqueado", lastAccess: "2026-05-29" }
       ]
@@ -106,6 +122,8 @@ const accountPill = document.querySelector("#accountPill");
 const planName = document.querySelector("#planName");
 const licenseRows = document.querySelector("#licenseRows");
 const clientCards = document.querySelector("#clientCards");
+const leadCards = document.querySelector("#leadCards");
+const projectCards = document.querySelector("#projectCards");
 const rows = document.querySelector("#documentRows");
 const purchaseRows = document.querySelector("#purchaseRows");
 const search = document.querySelector("#documentSearch");
@@ -118,12 +136,19 @@ const dialog = document.querySelector("#documentDialog");
 const documentDetailsDialog = document.querySelector("#documentDetailsDialog");
 const reportDialog = document.querySelector("#reportDialog");
 const purchaseDialog = document.querySelector("#purchaseDialog");
+const leadDialog = document.querySelector("#leadDialog");
+const leadCallDialog = document.querySelector("#leadCallDialog");
+const projectDialog = document.querySelector("#projectDialog");
 const clientDialog = document.querySelector("#clientDialog");
 const companyDialog = document.querySelector("#companyDialog");
 const userDialog = document.querySelector("#userDialog");
 const dialogTitle = document.querySelector("#dialogTitle");
 const typeInput = document.querySelector("#typeInput");
+const documentProjectField = document.querySelector("#documentProjectField");
+const documentProjectInput = document.querySelector("#documentProjectInput");
 const lineItems = document.querySelector("#lineItems");
+const receiptLinkPanel = document.querySelector("#receiptLinkPanel");
+const receiptInvoiceLinks = document.querySelector("#receiptInvoiceLinks");
 const previewSubtotal = document.querySelector("#previewSubtotal");
 const previewVat = document.querySelector("#previewVat");
 const previewTotal = document.querySelector("#previewTotal");
@@ -138,8 +163,12 @@ const downloadPdfButton = document.querySelector("#downloadPdfButton");
 const reportTitle = document.querySelector("#reportTitle");
 const reportBody = document.querySelector("#reportBody");
 const exportReportButton = document.querySelector("#exportReportButton");
+const purchaseProjectField = document.querySelector("#purchaseProjectField");
+const purchaseProjectInput = document.querySelector("#purchaseProjectInput");
+const projectClientInput = document.querySelector("#projectClientInput");
 const toast = document.querySelector("#toast");
 let currentReportCsv = "";
+let selectedLeadId = null;
 
 function loadState() {
   try {
@@ -192,6 +221,16 @@ function normalizeDocuments() {
     if (!Array.isArray(company.purchases)) {
       company.purchases = [];
     }
+    if (!Array.isArray(company.projects)) {
+      company.projects = [];
+    }
+    if (!Array.isArray(company.leads)) {
+      company.leads = [];
+    }
+    company.leads.forEach((lead, index) => {
+      lead.id = lead.id || `LD-${String(index + 1).padStart(3, "0")}`;
+      lead.calls = Array.isArray(lead.calls) ? lead.calls : [];
+    });
     company.clients.forEach((client) => {
       if (!client.address) {
         client.address = client.city ? `${client.city}, Mocambique` : "Mocambique";
@@ -207,6 +246,10 @@ function normalizeDocuments() {
       documentItem.vat = totals.vat;
       documentItem.total = totals.total;
       documentItem.dueDate = documentItem.type === "Factura" ? calculateDueDate(documentItem.date) : documentItem.date;
+      if (!Array.isArray(documentItem.relatedInvoices)) {
+        documentItem.relatedInvoices = [];
+      }
+      documentItem.project = documentItem.project || "";
       documentItem.status = getDocumentStatus(documentItem);
     });
     company.purchases.forEach((purchase) => {
@@ -215,6 +258,7 @@ function normalizeDocuments() {
       purchase.vatRate = vatRate;
       purchase.vat = net * (vatRate / 100);
       purchase.total = net + purchase.vat;
+      purchase.project = purchase.project || "";
     });
   });
 }
@@ -255,6 +299,9 @@ function formatDate(date) {
 }
 
 function getDocumentStatus(documentItem) {
+  if (documentItem.type === "Orcamento") {
+    return documentItem.status || "Aberto";
+  }
   if (documentItem.status === "Pago" || documentItem.type === "Recibo") {
     return "Pago";
   }
@@ -269,6 +316,22 @@ function hasModule(moduleName) {
   return currentRole === "admin" || activeCompany.modules.includes(moduleName);
 }
 
+function projectOptionsHtml(selected = "") {
+  const projects = activeCompany.projects || [];
+  return `<option value="">Sem projecto</option>${projects.map((project) => `
+    <option value="${project.name}" ${project.name === selected ? "selected" : ""}>${project.name}</option>
+  `).join("")}`;
+}
+
+function syncProjectFields() {
+  const enabled = hasModule("Projectos");
+  documentProjectField.hidden = !enabled;
+  purchaseProjectField.hidden = !enabled;
+  documentProjectInput.innerHTML = projectOptionsHtml(documentProjectInput.value);
+  purchaseProjectInput.innerHTML = projectOptionsHtml(purchaseProjectInput.value);
+  projectClientInput.innerHTML = activeCompany.clients.map((client) => `<option>${client.name}</option>`).join("");
+}
+
 function findClientByName(name) {
   return activeCompany.clients.find((client) => client.name === name) || {
     name,
@@ -280,13 +343,18 @@ function findClientByName(name) {
 function statusClass(status) {
   if (status === "Pago") return "paid";
   if (status === "Vencido") return "overdue";
+  if (status === "Aberto") return "pending";
   return "pending";
 }
 
 function nextNumber(type) {
-  const prefix = type === "Recibo" ? "RC" : "FT";
+  const prefix = type === "Recibo" ? "RC" : type === "Orcamento" ? "OR" : "FT";
   const count = activeCompany.documents.filter((item) => item.type === type).length + 1;
   return `${prefix} 2026/${String(count).padStart(3, "0")}`;
+}
+
+function nextLeadId() {
+  return `LD-${String((activeCompany.leads || []).length + 1).padStart(3, "0")}`;
 }
 
 function setView(viewId) {
@@ -296,6 +364,14 @@ function setView(viewId) {
   }
   if (viewId === "users" && !hasModule("Utilizadores")) {
     showToast("Modulo de utilizadores bloqueado nesta licenca.");
+    return;
+  }
+  if (viewId === "projects" && !hasModule("Projectos")) {
+    showToast("Modulo de projectos bloqueado nesta licenca.");
+    return;
+  }
+  if (viewId === "leads" && !hasModule("Leads")) {
+    showToast("Modulo de leads bloqueado nesta licenca.");
     return;
   }
 
@@ -314,7 +390,7 @@ function renderDashboard() {
   const receipts = docs.filter((item) => item.type === "Recibo");
   const purchases = activeCompany.purchases || [];
   const revenue = invoices.reduce((sum, item) => sum + item.total, 0);
-  const vat = docs.reduce((sum, item) => sum + item.vat, 0) - purchases.reduce((sum, item) => sum + item.vat, 0);
+  const vat = invoices.reduce((sum, item) => sum + item.vat, 0) - purchases.reduce((sum, item) => sum + item.vat, 0);
   const receivable = invoices
     .filter((item) => getDocumentStatus(item) !== "Pago")
     .reduce((sum, item) => sum + item.total, 0);
@@ -341,6 +417,7 @@ function renderPurchases() {
       <td>${purchase.nuit}</td>
       <td>${formatDate(purchase.date)}</td>
       <td>${purchase.description}</td>
+      <td>${purchase.project || "-"}</td>
       <td class="numeric">${formatMoney(purchase.net)}</td>
       <td class="numeric">${Number(purchase.vatRate || 0)}% - ${formatMoney(purchase.vat)}</td>
       <td class="numeric">${formatMoney(purchase.total)}</td>
@@ -365,6 +442,7 @@ function renderDocuments() {
         <td><strong>${item.number}</strong></td>
         <td>${item.client}</td>
         <td>${item.type}</td>
+        <td>${item.project || "-"}</td>
         <td>${item.items.length}</td>
         <td>${formatDate(item.date)}</td>
         <td><span class="badge ${statusClass(status)}">${status}</span></td>
@@ -395,6 +473,7 @@ function openDocumentDetails(number) {
     <div><span>Vencimento</span><strong>${formatDate(documentItem.dueDate || calculateDueDate(documentItem.date))}</strong></div>
     <div><span>Estado</span><strong>${getDocumentStatus(documentItem)}</strong></div>
     <div><span>Itens</span><strong>${documentItem.items.length}</strong></div>
+    ${documentItem.type === "Recibo" ? `<div><span>Facturas</span><strong>${documentItem.relatedInvoices?.length ? documentItem.relatedInvoices.join(", ") : "Sem associacao"}</strong></div>` : ""}
   `;
   detailsItemRows.innerHTML = documentItem.items.map((item) => {
     const net = Number(item.quantity || 0) * Number(item.unitPrice || 0);
@@ -438,6 +517,56 @@ function renderClients() {
   clientInput.innerHTML = activeCompany.clients
     .map((client) => `<option>${client.name}</option>`)
     .join("");
+}
+
+function renderLeads() {
+  const leads = activeCompany.leads || [];
+  leadCards.innerHTML = leads.length ? leads.map((lead) => {
+    const lastCall = lead.calls.at(-1);
+    return `
+      <article class="client-card">
+        <strong>${lead.name}</strong>
+        <span>NUIT ${lead.nuit || "-"}</span>
+        <small>${lead.phone || "-"}</small>
+        <small>${lead.address || "-"}</small>
+        <div class="client-bank-details">
+          <span>Origem: ${lead.source || "-"}</span>
+          <span>Estado: ${lead.status}</span>
+          <span>Chamadas: ${lead.calls.length}</span>
+          <span>Ultima: ${lastCall ? `${formatDate(lastCall.date)} - ${lastCall.outcome}` : "Sem chamadas"}</span>
+        </div>
+        <div class="row-actions">
+          <button type="button" data-action="call-lead" data-id="${lead.id}">Chamada</button>
+          <button type="button" data-action="convert-lead" data-id="${lead.id}">Converter</button>
+        </div>
+      </article>
+    `;
+  }).join("") : "<p class=\"empty-note\">Nenhum lead registado.</p>";
+}
+
+function renderProjects() {
+  const projects = activeCompany.projects || [];
+  projectCards.innerHTML = projects.length ? projects.map((project) => {
+    const revenue = activeCompany.documents
+      .filter((item) => item.project === project.name && item.type === "Factura")
+      .reduce((sum, item) => sum + Number(item.total || 0), 0);
+    const purchases = (activeCompany.purchases || [])
+      .filter((item) => item.project === project.name)
+      .reduce((sum, item) => sum + Number(item.total || 0), 0);
+    return `
+      <article class="client-card">
+        <strong>${project.name}</strong>
+        <span>${project.client}</span>
+        <small>Estado: ${project.status}</small>
+        <small>Orcamento: ${formatMoney(project.budget)}</small>
+        <div class="client-bank-details">
+          <span>Facturado: ${formatMoney(revenue)}</span>
+          <span>Compras: ${formatMoney(purchases)}</span>
+          <span>Saldo: ${formatMoney(revenue - purchases)}</span>
+        </div>
+      </article>
+    `;
+  }).join("") : "<p class=\"empty-note\">Nenhum projecto criado.</p>";
 }
 
 function renderReports() {
@@ -505,7 +634,7 @@ function openVatReport() {
   const invoiceNet = invoices.reduce((sum, item) => sum + Number(item.net || 0), 0);
   const invoiceVat = invoices.reduce((sum, item) => sum + Number(item.vat || 0), 0);
   const deductibleVat = purchases.reduce((sum, item) => sum + Number(item.vat || 0), 0);
-  const salesRows = activeCompany.documents.map((item) => [
+  const salesRows = invoices.map((item) => [
     item.number,
     item.type,
     item.client,
@@ -677,6 +806,8 @@ function renderLicenses() {
         <div class="row-actions">
           <button type="button" data-action="view-company" data-nuit="${company.nuit}">Entrar</button>
           <button type="button" data-action="toggle-reports" data-nuit="${company.nuit}">Relatorios</button>
+          <button type="button" data-action="toggle-projects" data-nuit="${company.nuit}">Projectos</button>
+          <button type="button" data-action="toggle-leads" data-nuit="${company.nuit}">Leads</button>
           <button type="button" data-action="upgrade-plan" data-nuit="${company.nuit}">Plano</button>
         </div>
       </td>
@@ -687,6 +818,8 @@ function renderLicenses() {
 function renderModuleLocks() {
   document.querySelector('[data-view="reports"]').classList.toggle("locked-feature", !hasModule("Relatorios"));
   document.querySelector('[data-view="users"]').classList.toggle("locked-feature", !hasModule("Utilizadores"));
+  document.querySelector('[data-view="projects"]').classList.toggle("locked-feature", !hasModule("Projectos"));
+  document.querySelector('[data-view="leads"]').classList.toggle("locked-feature", !hasModule("Leads"));
   document.querySelector("#newReceiptButton").classList.toggle("locked-feature", !hasModule("Recibos"));
 }
 
@@ -695,9 +828,12 @@ function renderAll() {
   renderPurchases();
   renderDocuments();
   renderClients();
+  renderLeads();
+  renderProjects();
   renderReports();
   renderUsers();
   renderLicenses();
+  syncProjectFields();
   renderModuleLocks();
 }
 
@@ -716,6 +852,7 @@ function applySession(role, company = state.companies[0]) {
   planName.textContent = role === "admin" ? "Gestao SaaS" : company.plan;
 
   document.querySelector(".admin-nav").hidden = role !== "admin";
+  document.querySelector("#newQuoteButton").hidden = role === "admin";
   document.querySelector("#newInvoiceButton").hidden = role === "admin";
   document.querySelector("#exportButton").hidden = role === "admin";
   document.querySelector("#newReceiptButton").hidden = role === "admin";
@@ -762,6 +899,35 @@ function addLineItemRow(item = { description: "Produto ou servico", quantity: 1,
   updatePreviewTotal();
 }
 
+function availableInvoicesForReceipt() {
+  return activeCompany.documents.filter((item) => item.type === "Factura");
+}
+
+function selectedReceiptInvoices() {
+  return [...receiptInvoiceLinks.querySelectorAll("input:checked")].map((input) => input.value);
+}
+
+function renderReceiptInvoiceLinks() {
+  const invoices = availableInvoicesForReceipt();
+  receiptInvoiceLinks.innerHTML = invoices.length
+    ? invoices.map((invoice) => `
+      <label>
+        <input type="checkbox" value="${invoice.number}">
+        <span>${invoice.number} - ${invoice.client}</span>
+        <strong>${formatMoney(invoice.total)}</strong>
+      </label>
+    `).join("")
+    : "<p class=\"empty-note\">Nao existem facturas para associar.</p>";
+}
+
+function syncDocumentDialogForType() {
+  const isReceipt = typeInput.value === "Recibo";
+  receiptLinkPanel.hidden = !isReceipt;
+  if (isReceipt) {
+    renderReceiptInvoiceLinks();
+  }
+}
+
 function getLineItems() {
   return [...lineItems.querySelectorAll(".line-item-row")]
     .map((row) => ({
@@ -791,10 +957,11 @@ function openDocumentDialog(type) {
     return;
   }
   typeInput.value = type;
-  dialogTitle.textContent = type === "Recibo" ? "Novo recibo" : "Nova factura";
+  dialogTitle.textContent = type === "Recibo" ? "Novo recibo" : type === "Orcamento" ? "Novo orcamento" : "Nova factura";
   lineItems.innerHTML = "";
   addLineItemRow({ description: "Produto ou servico", quantity: 1, unitPrice: 120000, vatRate: VAT_RATE });
   updatePreviewTotal();
+  syncDocumentDialogForType();
   dialog.showModal();
 }
 
@@ -805,6 +972,8 @@ function exportCurrentData() {
     generatedAt: new Date().toISOString(),
     documents: activeCompany.documents,
     purchases: activeCompany.purchases,
+    projects: activeCompany.projects,
+    leads: activeCompany.leads,
     clients: activeCompany.clients
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -1111,6 +1280,7 @@ loginForm.addEventListener("submit", (event) => {
 });
 
 document.querySelector("#newInvoiceButton").addEventListener("click", () => openDocumentDialog("Factura"));
+document.querySelector("#newQuoteButton").addEventListener("click", () => openDocumentDialog("Orcamento"));
 document.querySelector("#newReceiptButton").addEventListener("click", () => openDocumentDialog("Recibo"));
 document.querySelector("#exportButton").addEventListener("click", exportCurrentData);
 downloadPdfButton.addEventListener("click", () => downloadDocumentPdf());
@@ -1122,8 +1292,24 @@ document.querySelector("#logoutButton").addEventListener("click", () => {
 });
 document.querySelector("#newCompanyButton").addEventListener("click", () => companyDialog.showModal());
 document.querySelector("#newClientButton").addEventListener("click", () => clientDialog.showModal());
+document.querySelector("#newLeadButton").addEventListener("click", () => {
+  if (!hasModule("Leads")) {
+    showToast("Modulo de leads bloqueado nesta licenca.");
+    return;
+  }
+  leadDialog.showModal();
+});
+document.querySelector("#newProjectButton").addEventListener("click", () => {
+  if (!hasModule("Projectos")) {
+    showToast("Modulo de projectos bloqueado nesta licenca.");
+    return;
+  }
+  syncProjectFields();
+  projectDialog.showModal();
+});
 document.querySelector("#newPurchaseButton").addEventListener("click", () => {
   document.querySelector("#purchaseDateInput").value = new Date().toISOString().slice(0, 10);
+  syncProjectFields();
   purchaseDialog.showModal();
 });
 document.querySelector("#newUserButton").addEventListener("click", () => {
@@ -1161,6 +1347,7 @@ exportReportButton.addEventListener("click", () => {
 search.addEventListener("input", renderDocuments);
 purchaseSearch.addEventListener("input", renderPurchases);
 statusFilter.addEventListener("change", renderDocuments);
+typeInput.addEventListener("change", syncDocumentDialogForType);
 userSearch.addEventListener("input", renderUsers);
 userStatusFilter.addEventListener("change", renderUsers);
 rows.addEventListener("click", (event) => {
@@ -1193,17 +1380,30 @@ document.querySelector("#createDocumentButton").addEventListener("click", () => 
     return;
   }
   const issueDate = new Date().toISOString().slice(0, 10);
+  const relatedInvoices = type === "Recibo" ? selectedReceiptInvoices() : [];
+  if (type === "Recibo" && !relatedInvoices.length) {
+    showToast("Seleccione pelo menos uma factura para associar ao recibo.");
+    return;
+  }
   activeCompany.documents.unshift({
     number: nextNumber(type),
     client: clientInput.value,
     type,
     date: issueDate,
     dueDate: type === "Factura" ? calculateDueDate(issueDate) : issueDate,
-    status: type === "Recibo" ? "Pago" : "Pendente",
+    status: type === "Recibo" ? "Pago" : type === "Orcamento" ? "Aberto" : "Pendente",
+    relatedInvoices,
+    project: hasModule("Projectos") ? documentProjectInput.value : "",
     items,
     net: totals.net,
     vat: totals.vat,
     total: totals.total
+  });
+  relatedInvoices.forEach((number) => {
+    const invoice = activeCompany.documents.find((item) => item.number === number);
+    if (invoice) {
+      invoice.status = "Pago";
+    }
   });
   saveState();
   renderAll();
@@ -1225,6 +1425,7 @@ document.querySelector("#createPurchaseButton").addEventListener("click", () => 
     nuit: document.querySelector("#supplierNuitInput").value.trim(),
     date: document.querySelector("#purchaseDateInput").value || new Date().toISOString().slice(0, 10),
     description: document.querySelector("#purchaseDescriptionInput").value.trim(),
+    project: hasModule("Projectos") ? purchaseProjectInput.value : "",
     net,
     vatRate,
     vat,
@@ -1234,6 +1435,50 @@ document.querySelector("#createPurchaseButton").addEventListener("click", () => 
   renderAll();
   setView("purchases");
   showToast("Factura de compra registada.");
+});
+
+document.querySelector("#createProjectButton").addEventListener("click", () => {
+  activeCompany.projects.push({
+    name: document.querySelector("#projectNameInput").value.trim(),
+    client: document.querySelector("#projectClientInput").value,
+    status: document.querySelector("#projectStatusInput").value,
+    budget: Number(document.querySelector("#projectBudgetInput").value || 0)
+  });
+  saveState();
+  renderAll();
+  setView("projects");
+  showToast("Projecto criado.");
+});
+
+document.querySelector("#createLeadButton").addEventListener("click", () => {
+  activeCompany.leads.push({
+    id: nextLeadId(),
+    name: document.querySelector("#leadNameInput").value.trim(),
+    nuit: document.querySelector("#leadNuitInput").value.trim(),
+    phone: document.querySelector("#leadPhoneInput").value.trim(),
+    source: document.querySelector("#leadSourceInput").value.trim(),
+    address: document.querySelector("#leadAddressInput").value.trim(),
+    status: document.querySelector("#leadStatusInput").value,
+    calls: []
+  });
+  saveState();
+  renderAll();
+  setView("leads");
+  showToast("Lead criado.");
+});
+
+document.querySelector("#createLeadCallButton").addEventListener("click", () => {
+  const lead = activeCompany.leads.find((item) => item.id === selectedLeadId);
+  if (!lead) return;
+  lead.calls.push({
+    date: document.querySelector("#leadCallDateInput").value || new Date().toISOString().slice(0, 10),
+    outcome: document.querySelector("#leadCallOutcomeInput").value,
+    notes: document.querySelector("#leadCallNotesInput").value.trim()
+  });
+  lead.status = lead.status === "Novo" ? "Contactado" : lead.status;
+  saveState();
+  renderAll();
+  showToast("Chamada registada.");
 });
 
 document.querySelector("#createClientButton").addEventListener("click", () => {
@@ -1290,6 +1535,38 @@ userRows.addEventListener("click", (event) => {
   renderUsers();
 });
 
+leadCards.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const lead = activeCompany.leads.find((item) => item.id === button.dataset.id);
+  if (!lead) return;
+
+  if (button.dataset.action === "call-lead") {
+    selectedLeadId = lead.id;
+    document.querySelector("#leadCallTitle").textContent = `Chamada - ${lead.name}`;
+    document.querySelector("#leadCallDateInput").value = new Date().toISOString().slice(0, 10);
+    leadCallDialog.showModal();
+  }
+
+  if (button.dataset.action === "convert-lead") {
+    const exists = activeCompany.clients.some((client) => client.nuit === lead.nuit || client.name === lead.name);
+    if (!exists) {
+      activeCompany.clients.push({
+        name: lead.name,
+        nuit: lead.nuit,
+        city: "",
+        address: lead.address,
+        bank: defaultClientBankDetails()
+      });
+    }
+    lead.status = "Convertido";
+    saveState();
+    renderAll();
+    setView("clients");
+    showToast(`${lead.name} convertido em cliente.`);
+  }
+});
+
 document.querySelector("#createCompanyButton").addEventListener("click", () => {
   const modules = [...companyDialog.querySelectorAll(".module-fieldset input:checked")].map((input) => input.value);
   state.companies.push({
@@ -1303,6 +1580,8 @@ document.querySelector("#createCompanyButton").addEventListener("click", () => {
     clients: [],
     documents: [],
     purchases: [],
+    projects: [],
+    leads: [],
     users: [
       {
         name: "Administrador",
@@ -1334,6 +1613,20 @@ licenseRows.addEventListener("click", (event) => {
       ? company.modules.filter((item) => item !== "Relatorios")
       : [...company.modules, "Relatorios"];
     showToast(`${company.name}: modulo Relatorios actualizado.`);
+  }
+
+  if (button.dataset.action === "toggle-projects") {
+    company.modules = company.modules.includes("Projectos")
+      ? company.modules.filter((item) => item !== "Projectos")
+      : [...company.modules, "Projectos"];
+    showToast(`${company.name}: modulo Projectos actualizado.`);
+  }
+
+  if (button.dataset.action === "toggle-leads") {
+    company.modules = company.modules.includes("Leads")
+      ? company.modules.filter((item) => item !== "Leads")
+      : [...company.modules, "Leads"];
+    showToast(`${company.name}: modulo Leads actualizado.`);
   }
 
   if (button.dataset.action === "upgrade-plan") {

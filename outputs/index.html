@@ -74,6 +74,14 @@
             <span class="icon" aria-hidden="true">◫</span>
             Clientes
           </button>
+          <button class="nav-item" data-view="leads" type="button">
+            <span class="icon" aria-hidden="true">LD</span>
+            Leads
+          </button>
+          <button class="nav-item" data-view="projects" type="button">
+            <span class="icon" aria-hidden="true">PR</span>
+            Projectos
+          </button>
           <button class="nav-item" data-view="reports" type="button">
             <span class="icon" aria-hidden="true">▥</span>
             Relatórios
@@ -104,6 +112,7 @@
           <div class="topbar-actions">
             <span class="account-pill" id="accountPill">Empresa demo</span>
             <button class="ghost-button" id="exportButton" type="button">Exportar</button>
+            <button class="ghost-button" id="newQuoteButton" type="button">Novo orÃ§amento</button>
             <button class="primary-button" id="newInvoiceButton" type="button">Nova factura</button>
             <button class="ghost-button" id="logoutButton" type="button">Sair</button>
           </div>
@@ -218,6 +227,7 @@
                   <th>Número</th>
                   <th>Cliente</th>
                   <th>Tipo</th>
+                  <th>Projecto</th>
                   <th>Itens</th>
                   <th>Data</th>
                   <th>Estado</th>
@@ -255,6 +265,7 @@
                   <th>NUIT</th>
                   <th>Data</th>
                   <th>Descricao</th>
+                  <th>Projecto</th>
                   <th class="numeric">Base</th>
                   <th class="numeric">IVA</th>
                   <th class="numeric">Total</th>
@@ -274,6 +285,28 @@
             <button class="primary-button" type="button" id="newClientButton">Novo cliente</button>
           </div>
           <div class="client-grid" id="clientCards"></div>
+        </section>
+
+        <section class="view" id="leads" aria-labelledby="leadsTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Comercial</p>
+              <h2 id="leadsTitle">Gestao de leads</h2>
+            </div>
+            <button class="primary-button" type="button" id="newLeadButton">Novo lead</button>
+          </div>
+          <div class="client-grid" id="leadCards"></div>
+        </section>
+
+        <section class="view" id="projects" aria-labelledby="projectsTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Modulo opcional</p>
+              <h2 id="projectsTitle">Projectos</h2>
+            </div>
+            <button class="primary-button" type="button" id="newProjectButton">Novo projecto</button>
+          </div>
+          <div class="client-grid" id="projectCards"></div>
         </section>
 
         <section class="view" id="reports" aria-labelledby="reportsTitle">
@@ -407,10 +440,23 @@
           <label>
             <span>Tipo</span>
             <select id="typeInput">
+              <option>Orcamento</option>
               <option>Factura</option>
               <option>Recibo</option>
             </select>
           </label>
+          <label id="documentProjectField">
+            <span>Projecto</span>
+            <select id="documentProjectInput"></select>
+          </label>
+        </div>
+
+        <div class="receipt-link-panel" id="receiptLinkPanel" hidden>
+          <div class="panel-header compact-header">
+            <h3>Facturas associadas ao recibo</h3>
+            <span>Escolha uma ou mais facturas</span>
+          </div>
+          <div class="receipt-link-list" id="receiptInvoiceLinks"></div>
         </div>
 
         <div class="line-items-panel">
@@ -541,6 +587,10 @@
               <option value="0">Isento</option>
             </select>
           </label>
+          <label id="purchaseProjectField">
+            <span>Projecto</span>
+            <select id="purchaseProjectInput"></select>
+          </label>
         </div>
 
         <div class="modal-actions">
@@ -588,6 +638,107 @@
         <div class="modal-actions">
           <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
           <button class="primary-button" id="createUserButton" value="default" type="submit">Guardar utilizador</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="leadDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Lead</p>
+            <h2>Novo lead</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">Ã—</button>
+        </div>
+        <div class="form-grid">
+          <label><span>Nome</span><input id="leadNameInput" type="text" value="Supermercado Costa do Sol"></label>
+          <label><span>NUIT</span><input id="leadNuitInput" type="text" value="507001234"></label>
+          <label><span>Telefone</span><input id="leadPhoneInput" type="text" value="+258 84 000 0000"></label>
+          <label><span>Origem</span><input id="leadSourceInput" type="text" value="Referencia"></label>
+          <label><span>Endereco</span><input id="leadAddressInput" type="text" value="Costa do Sol, Maputo"></label>
+          <label>
+            <span>Estado</span>
+            <select id="leadStatusInput">
+              <option selected>Novo</option>
+              <option>Contactado</option>
+              <option>Proposta enviada</option>
+              <option>Convertido</option>
+              <option>Perdido</option>
+            </select>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="createLeadButton" value="default" type="submit">Guardar lead</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="leadCallDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Chamada</p>
+            <h2 id="leadCallTitle">Registar chamada</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">Ã—</button>
+        </div>
+        <div class="form-grid">
+          <label><span>Data</span><input id="leadCallDateInput" type="date"></label>
+          <label>
+            <span>Resultado</span>
+            <select id="leadCallOutcomeInput">
+              <option selected>Atendeu</option>
+              <option>Nao atendeu</option>
+              <option>Pedido de proposta</option>
+              <option>Reuniao marcada</option>
+              <option>Sem interesse</option>
+            </select>
+          </label>
+          <label><span>Notas</span><input id="leadCallNotesInput" type="text" value="Ficou de analisar a proposta."></label>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="createLeadCallButton" value="default" type="submit">Guardar chamada</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="projectDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Projecto</p>
+            <h2>Novo projecto</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">Ã—</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Nome do projecto</span>
+            <input id="projectNameInput" type="text" value="Expansao Maputo">
+          </label>
+          <label>
+            <span>Cliente</span>
+            <select id="projectClientInput"></select>
+          </label>
+          <label>
+            <span>Estado</span>
+            <select id="projectStatusInput">
+              <option selected>Activo</option>
+              <option>Concluido</option>
+              <option>Suspenso</option>
+            </select>
+          </label>
+          <label>
+            <span>Orcamento previsto</span>
+            <input id="projectBudgetInput" type="number" min="0" step="0.01" value="350000">
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="createProjectButton" value="default" type="submit">Guardar projecto</button>
         </div>
       </form>
     </dialog>
@@ -684,6 +835,8 @@
           <label><input type="checkbox" value="IVA" checked> IVA</label>
           <label><input type="checkbox" value="Relatorios" checked> Relatórios</label>
           <label><input type="checkbox" value="Utilizadores"> Utilizadores</label>
+          <label><input type="checkbox" value="Projectos" checked> Projectos</label>
+          <label><input type="checkbox" value="Leads" checked> Leads</label>
         </fieldset>
         <div class="modal-actions">
           <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
