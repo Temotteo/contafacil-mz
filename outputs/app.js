@@ -139,6 +139,7 @@ const purchaseDialog = document.querySelector("#purchaseDialog");
 const leadDialog = document.querySelector("#leadDialog");
 const leadCallDialog = document.querySelector("#leadCallDialog");
 const projectDialog = document.querySelector("#projectDialog");
+const permissionsDialog = document.querySelector("#permissionsDialog");
 const clientDialog = document.querySelector("#clientDialog");
 const companyDialog = document.querySelector("#companyDialog");
 const userDialog = document.querySelector("#userDialog");
@@ -166,9 +167,27 @@ const exportReportButton = document.querySelector("#exportReportButton");
 const purchaseProjectField = document.querySelector("#purchaseProjectField");
 const purchaseProjectInput = document.querySelector("#purchaseProjectInput");
 const projectClientInput = document.querySelector("#projectClientInput");
+const permissionsTitle = document.querySelector("#permissionsTitle");
+const permissionsGrid = document.querySelector("#permissionsGrid");
 const toast = document.querySelector("#toast");
 let currentReportCsv = "";
 let selectedLeadId = null;
+let selectedPermissionEmail = null;
+
+const permissionCatalog = [
+  { key: "documents.view", group: "Documentos", label: "Ver documentos" },
+  { key: "documents.createInvoice", group: "Documentos", label: "Criar facturas" },
+  { key: "documents.createQuote", group: "Documentos", label: "Criar orcamentos" },
+  { key: "documents.createReceipt", group: "Documentos", label: "Emitir recibos" },
+  { key: "documents.downloadPdf", group: "Documentos", label: "Baixar PDF" },
+  { key: "clients.manage", group: "Clientes", label: "Gerir clientes" },
+  { key: "purchases.manage", group: "Compras", label: "Gerir compras" },
+  { key: "projects.manage", group: "Projectos", label: "Gerir projectos" },
+  { key: "leads.manage", group: "Leads", label: "Gerir leads" },
+  { key: "reports.view", group: "Relatorios", label: "Ver relatorios" },
+  { key: "reports.export", group: "Relatorios", label: "Exportar relatorios" },
+  { key: "users.manage", group: "Utilizadores", label: "Gerir utilizadores" }
+];
 
 function loadState() {
   try {
@@ -203,6 +222,41 @@ function normalizeClientBankDetails(client) {
   };
 }
 
+function permissionsForRole(role) {
+  const all = permissionCatalog.map((item) => item.key);
+  const profiles = {
+    Administrador: all,
+    Contabilista: [
+      "documents.view",
+      "documents.createInvoice",
+      "documents.createQuote",
+      "documents.createReceipt",
+      "documents.downloadPdf",
+      "clients.manage",
+      "purchases.manage",
+      "projects.manage",
+      "reports.view",
+      "reports.export"
+    ],
+    Operador: [
+      "documents.view",
+      "documents.createInvoice",
+      "documents.createQuote",
+      "documents.createReceipt",
+      "clients.manage",
+      "leads.manage"
+    ],
+    Consulta: ["documents.view", "reports.view"]
+  };
+  return profiles[role] || profiles.Consulta;
+}
+
+function normalizeUserPermissions(user) {
+  user.permissions = Array.isArray(user.permissions) && user.permissions.length
+    ? user.permissions
+    : permissionsForRole(user.role);
+}
+
 function normalizeDocuments() {
   state.companies.forEach((company) => {
     if (!company.address) {
@@ -228,6 +282,7 @@ function normalizeDocuments() {
         }
       ];
     }
+    company.users.forEach(normalizeUserPermissions);
     if (!Array.isArray(company.purchases)) {
       company.purchases = [];
     }
@@ -784,12 +839,13 @@ function renderUsers() {
       <td><strong>${user.name}</strong></td>
       <td>${user.email}</td>
       <td>${user.role}</td>
+      <td>${user.permissions.length}/${permissionCatalog.length}</td>
       <td><span class="badge ${user.status === "Activo" ? "paid" : "overdue"}">${user.status}</span></td>
       <td>${user.lastAccess}</td>
       <td>
         <div class="row-actions">
           <button type="button" data-action="toggle-user" data-email="${user.email}">${user.status === "Activo" ? "Bloquear" : "Activar"}</button>
-          <button type="button" data-action="promote-user" data-email="${user.email}">Função</button>
+          <button type="button" data-action="edit-permissions" data-email="${user.email}">Permissoes</button>
         </div>
       </td>
     </tr>

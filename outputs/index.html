@@ -230,6 +230,7 @@
                   <th>Projecto</th>
                   <th>Itens</th>
                   <th>Data</th>
+                  <th>Permissoes</th>
                   <th>Estado</th>
                   <th class="numeric">Total</th>
                   <th>Acções</th>
@@ -638,6 +639,23 @@
         <div class="modal-actions">
           <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
           <button class="primary-button" id="createUserButton" value="default" type="submit">Guardar utilizador</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="permissionsDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Acessos</p>
+            <h2 id="permissionsTitle">Permissoes</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">Ã—</button>
+        </div>
+        <div class="permissions-grid" id="permissionsGrid"></div>
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="savePermissionsButton" value="default" type="submit">Guardar permissoes</button>
         </div>
       </form>
     </dialog>
