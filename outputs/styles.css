@@ -703,6 +703,18 @@ tbody tr:last-child td {
   padding: 18px;
 }
 
+.client-bank-details {
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.client-bank-details span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .report-list {
   display: grid;
   gap: 10px;

@@ -19,9 +19,9 @@ const seedState = {
       modules: ["Facturacao", "Recibos", "IVA", "Relatorios", "Utilizadores"],
       monthly: 12500,
       clients: [
-        { name: "Mercado Central Maputo", nuit: "500884112", city: "Maputo", address: "Av. Guerra Popular, Mercado Central, Maputo" },
-        { name: "Cafe Avenida Julius Nyerere", nuit: "501220775", city: "Maputo", address: "Av. Julius Nyerere, Polana, Maputo" },
-        { name: "Hotel Baia da Beira", nuit: "502112390", city: "Beira", address: "Av. Marginal, Beira" }
+        { name: "Mercado Central Maputo", nuit: "500884112", city: "Maputo", address: "Av. Guerra Popular, Mercado Central, Maputo", bank: { bankName: "BCI", accountNumber: "1020304050", swift: "CGDIMZMA", nib: "0008.0000.10203040.501.11" } },
+        { name: "Cafe Avenida Julius Nyerere", nuit: "501220775", city: "Maputo", address: "Av. Julius Nyerere, Polana, Maputo", bank: { bankName: "Millennium BIM", accountNumber: "9080706050", swift: "BIMOMZMX", nib: "0001.0000.90807060.501.11" } },
+        { name: "Hotel Baia da Beira", nuit: "502112390", city: "Beira", address: "Av. Marginal, Beira", bank: { bankName: "Moza Banco", accountNumber: "007607676101", swift: "MOZAMZMAXXX", nib: "0034.0000.07607676.101.11" } }
       ],
       documents: [
         { number: "FT 2026/084", client: "Mercado Central Maputo", type: "Factura", date: "2026-06-05", status: "Pago", items: makeItems("Fornecimento de paes e bolos", 212068.97), net: 212068.97, vat: 33931.03, total: 246000 },
@@ -43,8 +43,8 @@ const seedState = {
       modules: ["Facturacao", "Recibos", "IVA"],
       monthly: 7000,
       clients: [
-        { name: "Empresa Transportes Matola", nuit: "503880119", city: "Matola", address: "EN4, Matola" },
-        { name: "Escola Kaya", nuit: "504119002", city: "Matola", address: "Bairro Fomento, Matola" }
+        { name: "Empresa Transportes Matola", nuit: "503880119", city: "Matola", address: "EN4, Matola", bank: { bankName: "Standard Bank", accountNumber: "3002001000", swift: "SBICMZMX", nib: "0002.0000.30020010.001.11" } },
+        { name: "Escola Kaya", nuit: "504119002", city: "Matola", address: "Bairro Fomento, Matola", bank: { bankName: "Absa Bank Mocambique", accountNumber: "7788990011", swift: "BARCMZMX", nib: "0006.0000.77889900.111.11" } }
       ],
       documents: [
         { number: "FT 2026/021", client: "Empresa Transportes Matola", type: "Factura", date: "2026-06-04", status: "Pendente", items: makeItems("Servicos clinicos", 86206.9), net: 86206.9, vat: 13793.1, total: 100000 },
@@ -62,7 +62,7 @@ const seedState = {
       status: "Suspensa",
       modules: ["Facturacao", "Recibos", "IVA", "Relatorios", "Utilizadores"],
       monthly: 14000,
-      clients: [{ name: "Agencia Turismo Sofala", nuit: "505882001", city: "Beira", address: "Rua Correia de Brito, Beira" }],
+      clients: [{ name: "Agencia Turismo Sofala", nuit: "505882001", city: "Beira", address: "Rua Correia de Brito, Beira", bank: { bankName: "FNB Mocambique", accountNumber: "4411223300", swift: "FIRNMZMX", nib: "0007.0000.44112233.001.11" } }],
       documents: [],
       users: [
         { name: "Joao Chissano", email: "joao@hotel.co.mz", role: "Administrador", status: "Bloqueado", lastAccess: "2026-05-29" }
@@ -138,6 +138,25 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function defaultClientBankDetails() {
+  return {
+    bankName: "Moza Banco",
+    accountNumber: "007607676101",
+    swift: "MOZAMZMAXXX",
+    nib: "0034.0000.07607676.101.11"
+  };
+}
+
+function normalizeClientBankDetails(client) {
+  const defaults = defaultClientBankDetails();
+  client.bank = {
+    bankName: client.bank?.bankName || defaults.bankName,
+    accountNumber: client.bank?.accountNumber || defaults.accountNumber,
+    swift: client.bank?.swift || defaults.swift,
+    nib: client.bank?.nib || defaults.nib
+  };
+}
+
 function normalizeDocuments() {
   state.companies.forEach((company) => {
     if (!company.address) {
@@ -158,6 +177,7 @@ function normalizeDocuments() {
       if (!client.address) {
         client.address = client.city ? `${client.city}, Mocambique` : "Mocambique";
       }
+      normalizeClientBankDetails(client);
     });
     company.documents.forEach((documentItem) => {
       if (!Array.isArray(documentItem.items)) {
@@ -167,6 +187,8 @@ function normalizeDocuments() {
       documentItem.net = totals.net;
       documentItem.vat = totals.vat;
       documentItem.total = totals.total;
+      documentItem.dueDate = documentItem.type === "Factura" ? calculateDueDate(documentItem.date) : documentItem.date;
+      documentItem.status = getDocumentStatus(documentItem);
     });
   });
 }
@@ -194,6 +216,27 @@ function calculateDocumentTotals(items) {
     },
     { net: 0, vat: 0, total: 0 }
   );
+}
+
+function calculateDueDate(date) {
+  const dueDate = new Date(`${date}T00:00:00`);
+  dueDate.setDate(dueDate.getDate() + 30);
+  return dueDate.toISOString().slice(0, 10);
+}
+
+function formatDate(date) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("pt-MZ");
+}
+
+function getDocumentStatus(documentItem) {
+  if (documentItem.status === "Pago" || documentItem.type === "Recibo") {
+    return "Pago";
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDate = new Date(`${documentItem.dueDate || calculateDueDate(documentItem.date)}T00:00:00`);
+  return dueDate < today ? "Vencido" : "Pendente";
 }
 
 function hasModule(moduleName) {
@@ -246,7 +289,7 @@ function renderDashboard() {
   const revenue = invoices.reduce((sum, item) => sum + item.total, 0);
   const vat = docs.reduce((sum, item) => sum + item.vat, 0);
   const receivable = invoices
-    .filter((item) => item.status !== "Pago")
+    .filter((item) => getDocumentStatus(item) !== "Pago")
     .reduce((sum, item) => sum + item.total, 0);
 
   document.querySelector("#metricRevenue").textContent = formatMoney(revenue);
@@ -254,7 +297,7 @@ function renderDashboard() {
   document.querySelector("#metricReceivable").textContent = formatMoney(receivable);
   document.querySelector("#metricReceipts").textContent = receipts.length;
   document.querySelector("#metricRevenueNote").textContent = `${invoices.length} facturas emitidas`;
-  document.querySelector("#metricReceivableNote").textContent = `${invoices.filter((item) => item.status !== "Pago").length} por regularizar`;
+  document.querySelector("#metricReceivableNote").textContent = `${invoices.filter((item) => getDocumentStatus(item) !== "Pago").length} por regularizar`;
   document.querySelector("#metricReceiptNote").textContent = receipts[0] ? `Ultimo recibo: ${receipts[0].number}` : "Sem recibos emitidos";
 }
 
@@ -262,27 +305,31 @@ function renderDocuments() {
   const query = search.value.trim().toLowerCase();
   const selectedStatus = statusFilter.value;
   const filtered = activeCompany.documents.filter((item) => {
-    const matchesQuery = [item.number, item.client, item.type, item.status].join(" ").toLowerCase().includes(query);
-    const matchesStatus = selectedStatus === "all" || item.status === selectedStatus;
+    const status = getDocumentStatus(item);
+    const matchesQuery = [item.number, item.client, item.type, status].join(" ").toLowerCase().includes(query);
+    const matchesStatus = selectedStatus === "all" || status === selectedStatus;
     return matchesQuery && matchesStatus;
   });
 
-  rows.innerHTML = filtered.map((item) => `
-    <tr>
-      <td><strong>${item.number}</strong></td>
-      <td>${item.client}</td>
-      <td>${item.type}</td>
-      <td>${item.items.length}</td>
-      <td>${new Date(item.date).toLocaleDateString("pt-MZ")}</td>
-      <td><span class="badge ${statusClass(item.status)}">${item.status}</span></td>
-      <td class="numeric">${formatMoney(item.total)}</td>
-      <td>
-        <div class="row-actions">
-          <button type="button" data-action="view-document" data-number="${item.number}">Ver</button>
-        </div>
-      </td>
-    </tr>
-  `).join("");
+  rows.innerHTML = filtered.map((item) => {
+    const status = getDocumentStatus(item);
+    return `
+      <tr>
+        <td><strong>${item.number}</strong></td>
+        <td>${item.client}</td>
+        <td>${item.type}</td>
+        <td>${item.items.length}</td>
+        <td>${formatDate(item.date)}</td>
+        <td><span class="badge ${statusClass(status)}">${status}</span></td>
+        <td class="numeric">${formatMoney(item.total)}</td>
+        <td>
+          <div class="row-actions">
+            <button type="button" data-action="view-document" data-number="${item.number}">Ver</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function openDocumentDetails(number) {
@@ -297,8 +344,9 @@ function openDocumentDetails(number) {
     <div><span>Cliente</span><strong>${documentItem.client}</strong></div>
     <div><span>NUIT</span><strong>${client.nuit}</strong></div>
     <div><span>Endereco</span><strong>${client.address}</strong></div>
-    <div><span>Data</span><strong>${new Date(documentItem.date).toLocaleDateString("pt-MZ")}</strong></div>
-    <div><span>Estado</span><strong>${documentItem.status}</strong></div>
+    <div><span>Data</span><strong>${formatDate(documentItem.date)}</strong></div>
+    <div><span>Vencimento</span><strong>${formatDate(documentItem.dueDate || calculateDueDate(documentItem.date))}</strong></div>
+    <div><span>Estado</span><strong>${getDocumentStatus(documentItem)}</strong></div>
     <div><span>Itens</span><strong>${documentItem.items.length}</strong></div>
   `;
   detailsItemRows.innerHTML = documentItem.items.map((item) => {
@@ -329,6 +377,12 @@ function renderClients() {
         <strong>${client.name}</strong>
         <span>NUIT ${client.nuit}</span>
         <small>${client.address}</small>
+        <div class="client-bank-details">
+          <span>Banco: ${client.bank.bankName}</span>
+          <span>Conta: ${client.bank.accountNumber}</span>
+          <span>SWIFT: ${client.bank.swift}</span>
+          <span>NIB: ${client.bank.nib}</span>
+        </div>
         <small>${formatMoney(total)} facturados</small>
       </article>
     `;
@@ -340,7 +394,7 @@ function renderClients() {
 }
 
 function renderReports() {
-  const overdue = activeCompany.documents.filter((item) => item.status === "Vencido").length;
+  const overdue = activeCompany.documents.filter((item) => getDocumentStatus(item) === "Vencido").length;
   const clientCount = activeCompany.clients.length;
   document.querySelector("#vatReportStatus").textContent = hasModule("IVA") ? "Pronto" : "Bloqueado";
   document.querySelector("#clientSalesStatus").textContent = `${clientCount} clientes`;
@@ -655,6 +709,7 @@ function buildPdf(objects, content) {
 function createInvoicePdf(documentItem) {
   const totals = calculateDocumentTotals(documentItem.items);
   const client = findClientByName(documentItem.client);
+  const dueDate = documentItem.dueDate || calculateDueDate(documentItem.date);
   const content = [];
   const text = (x, y, value, size = 9, font = "F1") => {
     content.push(`BT /${font} ${size} Tf ${x} ${y} Td (${pdfEscape(value)}) Tj ET`);
@@ -686,7 +741,7 @@ function createInvoicePdf(documentItem) {
   text(410, 818, "ORIGINAL", 9, "F2");
   text(410, 804, documentItem.type.toUpperCase(), 16, "F2");
   text(410, 786, documentItem.number, 11, "F2");
-  text(410, 773, `Emitido em ${new Date(documentItem.date).toLocaleDateString("pt-MZ")}`, 8);
+  text(410, 773, `Emitido em ${formatDate(documentItem.date)}`, 8);
 
   strokeColor();
   rect(36, 652, 325, 72);
@@ -701,9 +756,9 @@ function createInvoicePdf(documentItem) {
   rect(380, 652, 179, 72);
   text(394, 704, "DADOS DO DOCUMENTO", 8, "F2");
   text(394, 686, "D. Emissao", 8, "F2");
-  textRight(548, 686, new Date(documentItem.date).toLocaleDateString("pt-MZ"), 9);
+  textRight(548, 686, formatDate(documentItem.date), 9);
   text(394, 668, "D. Vencimento", 8, "F2");
-  textRight(548, 668, new Date(documentItem.date).toLocaleDateString("pt-MZ"), 9);
+  textRight(548, 668, formatDate(dueDate), 9);
 
   rect(36, 568, 523, 30);
   text(46, 580, "Ref.", 8, "F2");
@@ -891,11 +946,13 @@ document.querySelector("#createDocumentButton").addEventListener("click", () => 
     showToast("Adicione pelo menos um item com valor.");
     return;
   }
+  const issueDate = new Date().toISOString().slice(0, 10);
   activeCompany.documents.unshift({
     number: nextNumber(type),
     client: clientInput.value,
     type,
-    date: new Date().toISOString().slice(0, 10),
+    date: issueDate,
+    dueDate: type === "Factura" ? calculateDueDate(issueDate) : issueDate,
     status: type === "Recibo" ? "Pago" : "Pendente",
     items,
     net: totals.net,
@@ -913,7 +970,13 @@ document.querySelector("#createClientButton").addEventListener("click", () => {
     name: document.querySelector("#clientNameInput").value.trim(),
     nuit: document.querySelector("#clientNuitInput").value.trim(),
     city: document.querySelector("#clientCityInput").value.trim(),
-    address: document.querySelector("#clientAddressInput").value.trim()
+    address: document.querySelector("#clientAddressInput").value.trim(),
+    bank: {
+      bankName: document.querySelector("#clientBankNameInput").value.trim(),
+      accountNumber: document.querySelector("#clientAccountNumberInput").value.trim(),
+      swift: document.querySelector("#clientSwiftInput").value.trim(),
+      nib: document.querySelector("#clientNibInput").value.trim()
+    }
   });
   saveState();
   renderAll();
