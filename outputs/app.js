@@ -173,7 +173,8 @@ let selectedLeadId = null;
 function loadState() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : structuredClone(seedState);
+    const parsed = saved ? JSON.parse(saved) : structuredClone(seedState);
+    return Array.isArray(parsed.companies) ? parsed : structuredClone(seedState);
   } catch {
     return structuredClone(seedState);
   }
@@ -206,6 +207,15 @@ function normalizeDocuments() {
   state.companies.forEach((company) => {
     if (!company.address) {
       company.address = "Mocambique";
+    }
+    if (!Array.isArray(company.modules)) {
+      company.modules = ["Facturacao", "Recibos", "IVA"];
+    }
+    if (!Array.isArray(company.clients)) {
+      company.clients = [];
+    }
+    if (!Array.isArray(company.documents)) {
+      company.documents = [];
     }
     if (!Array.isArray(company.users)) {
       company.users = [
@@ -313,7 +323,7 @@ function getDocumentStatus(documentItem) {
 }
 
 function hasModule(moduleName) {
-  return currentRole === "admin" || activeCompany.modules.includes(moduleName);
+  return currentRole === "admin" || (Array.isArray(activeCompany.modules) && activeCompany.modules.includes(moduleName));
 }
 
 function projectOptionsHtml(selected = "") {
@@ -327,9 +337,11 @@ function syncProjectFields() {
   const enabled = hasModule("Projectos");
   documentProjectField.hidden = !enabled;
   purchaseProjectField.hidden = !enabled;
-  documentProjectInput.innerHTML = projectOptionsHtml(documentProjectInput.value);
-  purchaseProjectInput.innerHTML = projectOptionsHtml(purchaseProjectInput.value);
-  projectClientInput.innerHTML = activeCompany.clients.map((client) => `<option>${client.name}</option>`).join("");
+  if (enabled) {
+    documentProjectInput.innerHTML = projectOptionsHtml(documentProjectInput.value);
+    purchaseProjectInput.innerHTML = projectOptionsHtml(purchaseProjectInput.value);
+  }
+  projectClientInput.innerHTML = (activeCompany.clients || []).map((client) => `<option>${client.name}</option>`).join("");
 }
 
 function findClientByName(name) {
@@ -522,7 +534,8 @@ function renderClients() {
 function renderLeads() {
   const leads = activeCompany.leads || [];
   leadCards.innerHTML = leads.length ? leads.map((lead) => {
-    const lastCall = lead.calls.at(-1);
+    const calls = Array.isArray(lead.calls) ? lead.calls : [];
+    const lastCall = calls[calls.length - 1];
     return `
       <article class="client-card">
         <strong>${lead.name}</strong>
@@ -532,7 +545,7 @@ function renderLeads() {
         <div class="client-bank-details">
           <span>Origem: ${lead.source || "-"}</span>
           <span>Estado: ${lead.status}</span>
-          <span>Chamadas: ${lead.calls.length}</span>
+          <span>Chamadas: ${calls.length}</span>
           <span>Ultima: ${lastCall ? `${formatDate(lastCall.date)} - ${lastCall.outcome}` : "Sem chamadas"}</span>
         </div>
         <div class="row-actions">
@@ -816,11 +829,11 @@ function renderLicenses() {
 }
 
 function renderModuleLocks() {
-  document.querySelector('[data-view="reports"]').classList.toggle("locked-feature", !hasModule("Relatorios"));
-  document.querySelector('[data-view="users"]').classList.toggle("locked-feature", !hasModule("Utilizadores"));
-  document.querySelector('[data-view="projects"]').classList.toggle("locked-feature", !hasModule("Projectos"));
-  document.querySelector('[data-view="leads"]').classList.toggle("locked-feature", !hasModule("Leads"));
-  document.querySelector("#newReceiptButton").classList.toggle("locked-feature", !hasModule("Recibos"));
+  document.querySelector('[data-view="reports"]')?.classList.toggle("locked-feature", !hasModule("Relatorios"));
+  document.querySelector('[data-view="users"]')?.classList.toggle("locked-feature", !hasModule("Utilizadores"));
+  document.querySelector('[data-view="projects"]')?.classList.toggle("locked-feature", !hasModule("Projectos"));
+  document.querySelector('[data-view="leads"]')?.classList.toggle("locked-feature", !hasModule("Leads"));
+  document.querySelector("#newReceiptButton")?.classList.toggle("locked-feature", !hasModule("Recibos"));
 }
 
 function renderAll() {
