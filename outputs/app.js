@@ -106,6 +106,7 @@ const userSearch = document.querySelector("#userSearch");
 const userStatusFilter = document.querySelector("#userStatusFilter");
 const dialog = document.querySelector("#documentDialog");
 const documentDetailsDialog = document.querySelector("#documentDetailsDialog");
+const reportDialog = document.querySelector("#reportDialog");
 const clientDialog = document.querySelector("#clientDialog");
 const companyDialog = document.querySelector("#companyDialog");
 const userDialog = document.querySelector("#userDialog");
@@ -123,7 +124,11 @@ const detailsSubtotal = document.querySelector("#detailsSubtotal");
 const detailsVat = document.querySelector("#detailsVat");
 const detailsTotal = document.querySelector("#detailsTotal");
 const downloadPdfButton = document.querySelector("#downloadPdfButton");
+const reportTitle = document.querySelector("#reportTitle");
+const reportBody = document.querySelector("#reportBody");
+const exportReportButton = document.querySelector("#exportReportButton");
 const toast = document.querySelector("#toast");
+let currentReportCsv = "";
 
 function loadState() {
   try {
@@ -397,8 +402,172 @@ function renderReports() {
   const overdue = activeCompany.documents.filter((item) => getDocumentStatus(item) === "Vencido").length;
   const clientCount = activeCompany.clients.length;
   document.querySelector("#vatReportStatus").textContent = hasModule("IVA") ? "Pronto" : "Bloqueado";
+  document.querySelector("#trialBalanceStatus").textContent = `${activeCompany.documents.length} docs`;
   document.querySelector("#clientSalesStatus").textContent = `${clientCount} clientes`;
   document.querySelector("#overdueStatus").textContent = `${overdue} itens`;
+}
+
+function csvEscape(value) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function rowsToCsv(headers, rowsData) {
+  return [headers, ...rowsData]
+    .map((row) => row.map(csvEscape).join(","))
+    .join("\n");
+}
+
+function reportTable(headers, rowsData) {
+  return `
+    <div class="table-wrap report-table">
+      <table>
+        <thead>
+          <tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>
+        </thead>
+        <tbody>
+          ${rowsData.map((row) => `
+            <tr>${row.map((cell, index) => `<td class="${index > 1 ? "numeric" : ""}">${cell}</td>`).join("")}</tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openReport(title, summaryCards, headers, rowsData) {
+  reportTitle.textContent = title;
+  reportBody.innerHTML = `
+    <div class="report-summary">
+      ${summaryCards.map((card) => `
+        <article>
+          <span>${card.label}</span>
+          <strong>${card.value}</strong>
+        </article>
+      `).join("")}
+    </div>
+    ${reportTable(headers, rowsData)}
+  `;
+  currentReportCsv = rowsToCsv(headers, rowsData);
+  exportReportButton.disabled = rowsData.length === 0;
+  reportDialog.showModal();
+}
+
+function openVatReport() {
+  if (!hasModule("IVA")) {
+    showToast("Modulo de IVA bloqueado nesta licenca.");
+    return;
+  }
+
+  const invoices = activeCompany.documents.filter((item) => item.type === "Factura");
+  const receipts = activeCompany.documents.filter((item) => item.type === "Recibo");
+  const invoiceNet = invoices.reduce((sum, item) => sum + Number(item.net || 0), 0);
+  const invoiceVat = invoices.reduce((sum, item) => sum + Number(item.vat || 0), 0);
+  const receivedVat = receipts.reduce((sum, item) => sum + Number(item.vat || 0), 0);
+  const rowsData = activeCompany.documents.map((item) => [
+    item.number,
+    item.type,
+    item.client,
+    formatDate(item.date),
+    formatMoney(item.net),
+    formatMoney(item.vat),
+    formatMoney(item.total),
+    getDocumentStatus(item)
+  ]);
+
+  openReport(
+    "Mapa de IVA",
+    [
+      { label: "Base tributavel", value: formatMoney(invoiceNet) },
+      { label: "IVA liquidado", value: formatMoney(invoiceVat) },
+      { label: "IVA recebido", value: formatMoney(receivedVat) },
+      { label: "IVA por receber", value: formatMoney(Math.max(invoiceVat - receivedVat, 0)) }
+    ],
+    ["Documento", "Tipo", "Cliente", "Data", "Base", "IVA", "Total", "Estado"],
+    rowsData
+  );
+}
+
+function openTrialBalanceReport() {
+  const invoices = activeCompany.documents.filter((item) => item.type === "Factura");
+  const receipts = activeCompany.documents.filter((item) => item.type === "Recibo");
+  const sales = invoices.reduce((sum, item) => sum + Number(item.net || 0), 0);
+  const vat = invoices.reduce((sum, item) => sum + Number(item.vat || 0), 0);
+  const receivables = invoices
+    .filter((item) => getDocumentStatus(item) !== "Pago")
+    .reduce((sum, item) => sum + Number(item.total || 0), 0);
+  const cash = receipts.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  const rowsData = [
+    ["Caixa/Bancos", "Activo", formatMoney(cash), "Recibos emitidos"],
+    ["Clientes", "Activo", formatMoney(receivables), "Facturas por receber"],
+    ["Vendas", "Rendimento", formatMoney(sales), "Facturas emitidas sem IVA"],
+    ["IVA liquidado", "Passivo", formatMoney(vat), "Imposto sobre facturas"]
+  ];
+
+  openReport(
+    "Balancete mensal",
+    [
+      { label: "Vendas", value: formatMoney(sales) },
+      { label: "Caixa/Bancos", value: formatMoney(cash) },
+      { label: "Clientes", value: formatMoney(receivables) },
+      { label: "IVA liquidado", value: formatMoney(vat) }
+    ],
+    ["Conta", "Classe", "Saldo", "Origem"],
+    rowsData
+  );
+}
+
+function openClientSalesReport() {
+  const rowsData = activeCompany.clients.map((client) => {
+    const docs = activeCompany.documents.filter((item) => item.client === client.name);
+    const invoices = docs.filter((item) => item.type === "Factura");
+    const total = invoices.reduce((sum, item) => sum + Number(item.total || 0), 0);
+    const paid = invoices
+      .filter((item) => getDocumentStatus(item) === "Pago")
+      .reduce((sum, item) => sum + Number(item.total || 0), 0);
+    const pending = Math.max(total - paid, 0);
+    return [client.name, client.nuit, invoices.length, formatMoney(total), formatMoney(paid), formatMoney(pending)];
+  });
+  const totalSales = activeCompany.documents
+    .filter((item) => item.type === "Factura")
+    .reduce((sum, item) => sum + Number(item.total || 0), 0);
+
+  openReport(
+    "Vendas por cliente",
+    [
+      { label: "Clientes", value: activeCompany.clients.length },
+      { label: "Total vendido", value: formatMoney(totalSales) },
+      { label: "Maior cliente", value: rowsData.slice().sort((a, b) => Number(String(b[3]).replace(/\D/g, "")) - Number(String(a[3]).replace(/\D/g, "")))[0]?.[0] || "-" }
+    ],
+    ["Cliente", "NUIT", "Facturas", "Total vendido", "Pago", "Pendente"],
+    rowsData
+  );
+}
+
+function openOverdueInvoicesReport() {
+  const overdue = activeCompany.documents.filter((item) => getDocumentStatus(item) === "Vencido");
+  const rowsData = overdue.map((item) => {
+    const dueDate = item.dueDate || calculateDueDate(item.date);
+    return [
+      item.number,
+      item.client,
+      formatDate(item.date),
+      formatDate(dueDate),
+      formatMoney(item.total),
+      item.status
+    ];
+  });
+  const total = overdue.reduce((sum, item) => sum + Number(item.total || 0), 0);
+
+  openReport(
+    "Facturas vencidas",
+    [
+      { label: "Facturas vencidas", value: overdue.length },
+      { label: "Valor vencido", value: formatMoney(total) },
+      { label: "Prazo", value: "30 dias" }
+    ],
+    ["Factura", "Cliente", "Emissao", "Vencimento", "Total", "Estado original"],
+    rowsData
+  );
 }
 
 function renderUsers() {
@@ -901,16 +1070,28 @@ document.querySelector("#newUserButton").addEventListener("click", () => {
   userDialog.showModal();
 });
 document.querySelector("#prepareVatButton").addEventListener("click", () => {
-  const vat = activeCompany.documents.reduce((sum, item) => sum + item.vat, 0);
-  showToast(`Mapa de IVA preparado: ${formatMoney(vat)} de IVA liquidado.`);
+  openVatReport();
 });
 document.querySelector("#vatReportButton").addEventListener("click", () => {
-  if (!hasModule("IVA")) {
-    showToast("Modulo de IVA bloqueado nesta licenca.");
-    return;
-  }
-  setView("reports");
-  showToast("Relatorio de IVA pronto para revisao.");
+  openVatReport();
+});
+document.querySelector("#trialBalanceButton").addEventListener("click", () => {
+  openTrialBalanceReport();
+});
+document.querySelector("#clientSalesButton").addEventListener("click", () => {
+  openClientSalesReport();
+});
+document.querySelector("#overdueInvoicesButton").addEventListener("click", () => {
+  openOverdueInvoicesReport();
+});
+exportReportButton.addEventListener("click", () => {
+  const blob = new Blob([currentReportCsv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${reportTitle.textContent.toLowerCase().replace(/\s+/g, "-")}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast("Relatorio exportado em CSV.");
 });
 
 search.addEventListener("input", renderDocuments);

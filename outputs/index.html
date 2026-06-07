@@ -247,9 +247,9 @@
           </div>
           <div class="report-list">
             <button type="button" id="vatReportButton"><span>Mapa de IVA</span><strong id="vatReportStatus">Pronto</strong></button>
-            <button type="button"><span>Balancete mensal</span><strong>Demo</strong></button>
-            <button type="button"><span>Vendas por cliente</span><strong id="clientSalesStatus">Pronto</strong></button>
-            <button type="button"><span>Facturas vencidas</span><strong id="overdueStatus">0 itens</strong></button>
+            <button type="button" id="trialBalanceButton"><span>Balancete mensal</span><strong id="trialBalanceStatus">Pronto</strong></button>
+            <button type="button" id="clientSalesButton"><span>Vendas por cliente</span><strong id="clientSalesStatus">Pronto</strong></button>
+            <button type="button" id="overdueInvoicesButton"><span>Facturas vencidas</span><strong id="overdueStatus">0 itens</strong></button>
           </div>
         </section>
 
@@ -436,6 +436,25 @@
 
         <div class="modal-actions">
           <button class="secondary-button" id="downloadPdfButton" type="button">Baixar PDF</button>
+          <button class="ghost-button" value="cancel" type="submit">Fechar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="reportDialog">
+      <form method="dialog" class="document-form report-dialog-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow" id="reportEyebrow">Contabilidade</p>
+            <h2 id="reportTitle">RelatÃ³rio</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">Ã—</button>
+        </div>
+
+        <div id="reportBody"></div>
+
+        <div class="modal-actions">
+          <button class="secondary-button" id="exportReportButton" type="button">Exportar CSV</button>
           <button class="ghost-button" value="cancel" type="submit">Fechar</button>
         </div>
       </form>
