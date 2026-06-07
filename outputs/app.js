@@ -852,6 +852,17 @@ function renderUsers() {
   `).join("");
 }
 
+function renderPermissionsEditor(user) {
+  permissionsTitle.textContent = `Permissoes - ${user.name}`;
+  permissionsGrid.innerHTML = permissionCatalog.map((permission) => `
+    <label>
+      <input type="checkbox" value="${permission.key}" ${user.permissions.includes(permission.key) ? "checked" : ""}>
+      <span>${permission.group}</span>
+      <strong>${permission.label}</strong>
+    </label>
+  `).join("");
+}
+
 function renderLicenses() {
   const active = state.companies.filter((item) => item.status === "Activa").length;
   const suspended = state.companies.filter((item) => item.status === "Suspensa").length;
@@ -1570,17 +1581,28 @@ document.querySelector("#createClientButton").addEventListener("click", () => {
 });
 
 document.querySelector("#createUserButton").addEventListener("click", () => {
+  const role = document.querySelector("#userRoleInput").value;
   activeCompany.users.push({
     name: document.querySelector("#userNameInput").value.trim(),
     email: document.querySelector("#userEmailInput").value.trim(),
-    role: document.querySelector("#userRoleInput").value,
+    role,
     status: document.querySelector("#userStatusInput").value,
-    lastAccess: "-"
+    lastAccess: "-",
+    permissions: permissionsForRole(role)
   });
   saveState();
   renderAll();
   setView("users");
   showToast("Utilizador criado.");
+});
+
+document.querySelector("#savePermissionsButton").addEventListener("click", () => {
+  const user = activeCompany.users.find((item) => item.email === selectedPermissionEmail);
+  if (!user) return;
+  user.permissions = [...permissionsGrid.querySelectorAll("input:checked")].map((input) => input.value);
+  saveState();
+  renderUsers();
+  showToast("Permissoes actualizadas.");
 });
 
 userRows.addEventListener("click", (event) => {
@@ -1594,10 +1616,11 @@ userRows.addEventListener("click", (event) => {
     showToast(`${user.name}: estado actualizado.`);
   }
 
-  if (button.dataset.action === "promote-user") {
-    const roles = ["Administrador", "Contabilista", "Operador", "Consulta"];
-    user.role = roles[(roles.indexOf(user.role) + 1) % roles.length];
-    showToast(`${user.name}: funcao alterada para ${user.role}.`);
+  if (button.dataset.action === "edit-permissions") {
+    selectedPermissionEmail = user.email;
+    renderPermissionsEditor(user);
+    permissionsDialog.showModal();
+    return;
   }
 
   saveState();

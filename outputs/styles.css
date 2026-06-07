@@ -789,6 +789,41 @@ dialog::backdrop {
   overflow: auto;
 }
 
+.permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.permissions-grid label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.permissions-grid input {
+  grid-row: span 2;
+  width: auto;
+  min-height: auto;
+}
+
+.permissions-grid span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.permissions-grid strong {
+  font-size: 0.92rem;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -994,6 +1029,7 @@ dialog::backdrop {
   .toolbar,
   .client-grid,
   .report-summary,
+  .permissions-grid,
   .details-summary,
   .form-grid,
   .line-item-row,
