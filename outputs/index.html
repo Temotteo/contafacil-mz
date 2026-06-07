@@ -635,10 +635,44 @@
               <option>Bloqueado</option>
             </select>
           </label>
+          <label>
+            <span>Palavra-passe inicial</span>
+            <input id="userPasswordInput" type="password" value="demo123" autocomplete="new-password">
+          </label>
         </div>
         <div class="modal-actions">
           <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
           <button class="primary-button" id="createUserButton" value="default" type="submit">Guardar utilizador</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="passwordDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Seguranca</p>
+            <h2 id="passwordTitle">Alterar palavra-passe</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Utilizador</span>
+            <input id="passwordUserName" type="text" readonly>
+          </label>
+          <label>
+            <span>Nova palavra-passe</span>
+            <input id="newPasswordInput" type="password" value="" autocomplete="new-password">
+          </label>
+          <label>
+            <span>Confirmar palavra-passe</span>
+            <input id="confirmPasswordInput" type="password" value="" autocomplete="new-password">
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="savePasswordButton" value="default" type="submit">Guardar password</button>
         </div>
       </form>
     </dialog>

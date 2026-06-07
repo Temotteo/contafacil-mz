@@ -140,6 +140,7 @@ const leadDialog = document.querySelector("#leadDialog");
 const leadCallDialog = document.querySelector("#leadCallDialog");
 const projectDialog = document.querySelector("#projectDialog");
 const permissionsDialog = document.querySelector("#permissionsDialog");
+const passwordDialog = document.querySelector("#passwordDialog");
 const clientDialog = document.querySelector("#clientDialog");
 const companyDialog = document.querySelector("#companyDialog");
 const userDialog = document.querySelector("#userDialog");
@@ -169,10 +170,15 @@ const purchaseProjectInput = document.querySelector("#purchaseProjectInput");
 const projectClientInput = document.querySelector("#projectClientInput");
 const permissionsTitle = document.querySelector("#permissionsTitle");
 const permissionsGrid = document.querySelector("#permissionsGrid");
+const passwordTitle = document.querySelector("#passwordTitle");
+const passwordUserName = document.querySelector("#passwordUserName");
+const newPasswordInput = document.querySelector("#newPasswordInput");
+const confirmPasswordInput = document.querySelector("#confirmPasswordInput");
 const toast = document.querySelector("#toast");
 let currentReportCsv = "";
 let selectedLeadId = null;
 let selectedPermissionEmail = null;
+let selectedPasswordEmail = null;
 
 const permissionCatalog = [
   { key: "documents.view", group: "Documentos", label: "Ver documentos" },
@@ -255,6 +261,7 @@ function normalizeUserPermissions(user) {
   user.permissions = Array.isArray(user.permissions) && user.permissions.length
     ? user.permissions
     : permissionsForRole(user.role);
+  user.password = user.password || "demo123";
 }
 
 function normalizeDocuments() {
@@ -847,6 +854,7 @@ function renderUsers() {
         <div class="row-actions">
           <button type="button" data-action="toggle-user" data-email="${user.email}">${user.status === "Activo" ? "Bloquear" : "Activar"}</button>
           <button type="button" data-action="edit-permissions" data-email="${user.email}" onclick="event.stopPropagation(); openUserPermissions(this.dataset.email)">Permissoes</button>
+          <button type="button" data-action="change-password" data-email="${user.email}" onclick="event.stopPropagation(); openUserPassword(this.dataset.email)">Password</button>
         </div>
       </td>
     </tr>
@@ -881,6 +889,27 @@ function openUserPermissions(email) {
 }
 
 window.openUserPermissions = openUserPermissions;
+
+function openUserPassword(email) {
+  const user = activeCompany.users.find((item) => item.email === email);
+  if (!user) {
+    showToast("Utilizador nao encontrado.");
+    return;
+  }
+  normalizeUserPermissions(user);
+  selectedPasswordEmail = user.email;
+  passwordTitle.textContent = `Password - ${user.name}`;
+  passwordUserName.value = `${user.name} (${user.email})`;
+  newPasswordInput.value = "";
+  confirmPasswordInput.value = "";
+  if (typeof passwordDialog.showModal === "function") {
+    passwordDialog.showModal();
+  } else {
+    passwordDialog.setAttribute("open", "");
+  }
+}
+
+window.openUserPassword = openUserPassword;
 
 function renderLicenses() {
   const active = state.companies.filter((item) => item.status === "Activa").length;
@@ -1375,6 +1404,13 @@ loginForm.addEventListener("submit", (event) => {
     showToast("NUIT nao encontrado.");
     return;
   }
+  company.users.forEach(normalizeUserPermissions);
+  const password = document.querySelector("#loginPassword").value;
+  const canAccess = company.users.some((user) => user.status === "Activo" && user.password === password);
+  if (!canAccess) {
+    showToast("Palavra-passe invalida ou utilizador bloqueado.");
+    return;
+  }
   applySession("company", company);
 });
 
@@ -1607,12 +1643,38 @@ document.querySelector("#createUserButton").addEventListener("click", () => {
     role,
     status: document.querySelector("#userStatusInput").value,
     lastAccess: "-",
-    permissions: permissionsForRole(role)
+    permissions: permissionsForRole(role),
+    password: document.querySelector("#userPasswordInput").value || "demo123"
   });
   saveState();
   renderAll();
   setView("users");
   showToast("Utilizador criado.");
+});
+
+document.querySelector("#savePasswordButton").addEventListener("click", (event) => {
+  const user = activeCompany.users.find((item) => item.email === selectedPasswordEmail);
+  const newPassword = newPasswordInput.value.trim();
+  const confirmPassword = confirmPasswordInput.value.trim();
+  if (!user) {
+    event.preventDefault();
+    showToast("Utilizador nao encontrado.");
+    return;
+  }
+  if (newPassword.length < 6) {
+    event.preventDefault();
+    showToast("A password deve ter pelo menos 6 caracteres.");
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    event.preventDefault();
+    showToast("As passwords nao coincidem.");
+    return;
+  }
+  user.password = newPassword;
+  saveState();
+  renderUsers();
+  showToast("Password actualizada.");
 });
 
 document.querySelector("#savePermissionsButton").addEventListener("click", () => {
@@ -1637,6 +1699,11 @@ userRows.addEventListener("click", (event) => {
 
   if (button.dataset.action === "edit-permissions") {
     openUserPermissions(user.email);
+    return;
+  }
+
+  if (button.dataset.action === "change-password") {
+    openUserPassword(user.email);
     return;
   }
 
