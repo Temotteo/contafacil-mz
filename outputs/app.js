@@ -826,6 +826,7 @@ function openOverdueInvoicesReport() {
 }
 
 function renderUsers() {
+  activeCompany.users.forEach(normalizeUserPermissions);
   const query = userSearch.value.trim().toLowerCase();
   const selectedStatus = userStatusFilter.value;
   const filtered = activeCompany.users.filter((user) => {
@@ -845,7 +846,7 @@ function renderUsers() {
       <td>
         <div class="row-actions">
           <button type="button" data-action="toggle-user" data-email="${user.email}">${user.status === "Activo" ? "Bloquear" : "Activar"}</button>
-          <button type="button" data-action="edit-permissions" data-email="${user.email}">Permissoes</button>
+          <button type="button" data-action="edit-permissions" data-email="${user.email}" onclick="event.stopPropagation(); openUserPermissions(this.dataset.email)">Permissoes</button>
         </div>
       </td>
     </tr>
@@ -853,6 +854,7 @@ function renderUsers() {
 }
 
 function renderPermissionsEditor(user) {
+  normalizeUserPermissions(user);
   permissionsTitle.textContent = `Permissoes - ${user.name}`;
   permissionsGrid.innerHTML = permissionCatalog.map((permission) => `
     <label>
@@ -862,6 +864,23 @@ function renderPermissionsEditor(user) {
     </label>
   `).join("");
 }
+
+function openUserPermissions(email) {
+  const user = activeCompany.users.find((item) => item.email === email);
+  if (!user) {
+    showToast("Utilizador nao encontrado.");
+    return;
+  }
+  selectedPermissionEmail = user.email;
+  renderPermissionsEditor(user);
+  if (typeof permissionsDialog.showModal === "function") {
+    permissionsDialog.showModal();
+  } else {
+    permissionsDialog.setAttribute("open", "");
+  }
+}
+
+window.openUserPermissions = openUserPermissions;
 
 function renderLicenses() {
   const active = state.companies.filter((item) => item.status === "Activa").length;
@@ -1617,9 +1636,7 @@ userRows.addEventListener("click", (event) => {
   }
 
   if (button.dataset.action === "edit-permissions") {
-    selectedPermissionEmail = user.email;
-    renderPermissionsEditor(user);
-    permissionsDialog.showModal();
+    openUserPermissions(user.email);
     return;
   }
 
