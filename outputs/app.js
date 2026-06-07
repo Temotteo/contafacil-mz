@@ -29,6 +29,10 @@ const seedState = {
         { number: "RC 2026/042", client: "Hotel Baia da Beira", type: "Recibo", date: "2026-06-02", status: "Pago", items: makeItems("Fornecimento semanal", 159051.72), net: 159051.72, vat: 25448.28, total: 184500 },
         { number: "FT 2026/079", client: "Cafe Avenida Julius Nyerere", type: "Factura", date: "2026-05-28", status: "Vencido", items: makeItems("Encomenda mensal", 50896.55), net: 50896.55, vat: 8143.45, total: 59040 }
       ],
+      purchases: [
+        { number: "FC 2026/018", supplier: "Moagem Nacional, Lda.", nuit: "600112233", date: "2026-06-04", description: "Farinha de trigo", net: 85000, vatRate: 16, vat: 13600, total: 98600 },
+        { number: "FC 2026/019", supplier: "Embalagens Maputo", nuit: "600445778", date: "2026-06-06", description: "Sacos e embalagens", net: 24000, vatRate: 16, vat: 3840, total: 27840 }
+      ],
       users: [
         { name: "Armando Tembe", email: "armando@padaria.co.mz", role: "Administrador", status: "Activo", lastAccess: "2026-06-06" },
         { name: "Elsa Mucavele", email: "elsa@padaria.co.mz", role: "Contabilista", status: "Activo", lastAccess: "2026-06-05" }
@@ -50,6 +54,9 @@ const seedState = {
         { number: "FT 2026/021", client: "Empresa Transportes Matola", type: "Factura", date: "2026-06-04", status: "Pendente", items: makeItems("Servicos clinicos", 86206.9), net: 86206.9, vat: 13793.1, total: 100000 },
         { number: "RC 2026/014", client: "Escola Kaya", type: "Recibo", date: "2026-06-01", status: "Pago", items: makeItems("Consultas e exames", 43103.45), net: 43103.45, vat: 6896.55, total: 50000 }
       ],
+      purchases: [
+        { number: "FC 2026/007", supplier: "Farmacia Central", nuit: "601002119", date: "2026-06-03", description: "Consumiveis clinicos", net: 32000, vatRate: 16, vat: 5120, total: 37120 }
+      ],
       users: [
         { name: "Marta Langa", email: "marta@clinica.co.mz", role: "Administrador", status: "Activo", lastAccess: "2026-06-04" }
       ]
@@ -64,6 +71,7 @@ const seedState = {
       monthly: 14000,
       clients: [{ name: "Agencia Turismo Sofala", nuit: "505882001", city: "Beira", address: "Rua Correia de Brito, Beira", bank: { bankName: "FNB Mocambique", accountNumber: "4411223300", swift: "FIRNMZMX", nib: "0007.0000.44112233.001.11" } }],
       documents: [],
+      purchases: [],
       users: [
         { name: "Joao Chissano", email: "joao@hotel.co.mz", role: "Administrador", status: "Bloqueado", lastAccess: "2026-05-29" }
       ]
@@ -99,7 +107,9 @@ const planName = document.querySelector("#planName");
 const licenseRows = document.querySelector("#licenseRows");
 const clientCards = document.querySelector("#clientCards");
 const rows = document.querySelector("#documentRows");
+const purchaseRows = document.querySelector("#purchaseRows");
 const search = document.querySelector("#documentSearch");
+const purchaseSearch = document.querySelector("#purchaseSearch");
 const statusFilter = document.querySelector("#statusFilter");
 const userRows = document.querySelector("#userRows");
 const userSearch = document.querySelector("#userSearch");
@@ -107,6 +117,7 @@ const userStatusFilter = document.querySelector("#userStatusFilter");
 const dialog = document.querySelector("#documentDialog");
 const documentDetailsDialog = document.querySelector("#documentDetailsDialog");
 const reportDialog = document.querySelector("#reportDialog");
+const purchaseDialog = document.querySelector("#purchaseDialog");
 const clientDialog = document.querySelector("#clientDialog");
 const companyDialog = document.querySelector("#companyDialog");
 const userDialog = document.querySelector("#userDialog");
@@ -178,6 +189,9 @@ function normalizeDocuments() {
         }
       ];
     }
+    if (!Array.isArray(company.purchases)) {
+      company.purchases = [];
+    }
     company.clients.forEach((client) => {
       if (!client.address) {
         client.address = client.city ? `${client.city}, Mocambique` : "Mocambique";
@@ -194,6 +208,13 @@ function normalizeDocuments() {
       documentItem.total = totals.total;
       documentItem.dueDate = documentItem.type === "Factura" ? calculateDueDate(documentItem.date) : documentItem.date;
       documentItem.status = getDocumentStatus(documentItem);
+    });
+    company.purchases.forEach((purchase) => {
+      const net = Number(purchase.net || 0);
+      const vatRate = Number(purchase.vatRate ?? VAT_RATE);
+      purchase.vatRate = vatRate;
+      purchase.vat = net * (vatRate / 100);
+      purchase.total = net + purchase.vat;
     });
   });
 }
@@ -291,8 +312,9 @@ function renderDashboard() {
   const docs = activeCompany.documents;
   const invoices = docs.filter((item) => item.type === "Factura");
   const receipts = docs.filter((item) => item.type === "Recibo");
+  const purchases = activeCompany.purchases || [];
   const revenue = invoices.reduce((sum, item) => sum + item.total, 0);
-  const vat = docs.reduce((sum, item) => sum + item.vat, 0);
+  const vat = docs.reduce((sum, item) => sum + item.vat, 0) - purchases.reduce((sum, item) => sum + item.vat, 0);
   const receivable = invoices
     .filter((item) => getDocumentStatus(item) !== "Pago")
     .reduce((sum, item) => sum + item.total, 0);
@@ -304,6 +326,26 @@ function renderDashboard() {
   document.querySelector("#metricRevenueNote").textContent = `${invoices.length} facturas emitidas`;
   document.querySelector("#metricReceivableNote").textContent = `${invoices.filter((item) => getDocumentStatus(item) !== "Pago").length} por regularizar`;
   document.querySelector("#metricReceiptNote").textContent = receipts[0] ? `Ultimo recibo: ${receipts[0].number}` : "Sem recibos emitidos";
+}
+
+function renderPurchases() {
+  const query = purchaseSearch.value.trim().toLowerCase();
+  const filtered = (activeCompany.purchases || []).filter((purchase) => {
+    return [purchase.number, purchase.supplier, purchase.nuit, purchase.description].join(" ").toLowerCase().includes(query);
+  });
+
+  purchaseRows.innerHTML = filtered.map((purchase) => `
+    <tr>
+      <td><strong>${purchase.number}</strong></td>
+      <td>${purchase.supplier}</td>
+      <td>${purchase.nuit}</td>
+      <td>${formatDate(purchase.date)}</td>
+      <td>${purchase.description}</td>
+      <td class="numeric">${formatMoney(purchase.net)}</td>
+      <td class="numeric">${Number(purchase.vatRate || 0)}% - ${formatMoney(purchase.vat)}</td>
+      <td class="numeric">${formatMoney(purchase.total)}</td>
+    </tr>
+  `).join("");
 }
 
 function renderDocuments() {
@@ -459,11 +501,11 @@ function openVatReport() {
   }
 
   const invoices = activeCompany.documents.filter((item) => item.type === "Factura");
-  const receipts = activeCompany.documents.filter((item) => item.type === "Recibo");
+  const purchases = activeCompany.purchases || [];
   const invoiceNet = invoices.reduce((sum, item) => sum + Number(item.net || 0), 0);
   const invoiceVat = invoices.reduce((sum, item) => sum + Number(item.vat || 0), 0);
-  const receivedVat = receipts.reduce((sum, item) => sum + Number(item.vat || 0), 0);
-  const rowsData = activeCompany.documents.map((item) => [
+  const deductibleVat = purchases.reduce((sum, item) => sum + Number(item.vat || 0), 0);
+  const salesRows = activeCompany.documents.map((item) => [
     item.number,
     item.type,
     item.client,
@@ -473,14 +515,25 @@ function openVatReport() {
     formatMoney(item.total),
     getDocumentStatus(item)
   ]);
+  const purchaseRowsData = purchases.map((item) => [
+    item.number,
+    "Compra",
+    item.supplier,
+    formatDate(item.date),
+    formatMoney(item.net),
+    `-${formatMoney(item.vat)}`,
+    formatMoney(item.total),
+    "IVA dedutivel"
+  ]);
+  const rowsData = [...salesRows, ...purchaseRowsData];
 
   openReport(
     "Mapa de IVA",
     [
       { label: "Base tributavel", value: formatMoney(invoiceNet) },
       { label: "IVA liquidado", value: formatMoney(invoiceVat) },
-      { label: "IVA recebido", value: formatMoney(receivedVat) },
-      { label: "IVA por receber", value: formatMoney(Math.max(invoiceVat - receivedVat, 0)) }
+      { label: "IVA dedutivel", value: formatMoney(deductibleVat) },
+      { label: "IVA a entregar", value: formatMoney(Math.max(invoiceVat - deductibleVat, 0)) }
     ],
     ["Documento", "Tipo", "Cliente", "Data", "Base", "IVA", "Total", "Estado"],
     rowsData
@@ -490,8 +543,11 @@ function openVatReport() {
 function openTrialBalanceReport() {
   const invoices = activeCompany.documents.filter((item) => item.type === "Factura");
   const receipts = activeCompany.documents.filter((item) => item.type === "Recibo");
+  const purchases = activeCompany.purchases || [];
   const sales = invoices.reduce((sum, item) => sum + Number(item.net || 0), 0);
   const vat = invoices.reduce((sum, item) => sum + Number(item.vat || 0), 0);
+  const purchaseCost = purchases.reduce((sum, item) => sum + Number(item.net || 0), 0);
+  const deductibleVat = purchases.reduce((sum, item) => sum + Number(item.vat || 0), 0);
   const receivables = invoices
     .filter((item) => getDocumentStatus(item) !== "Pago")
     .reduce((sum, item) => sum + Number(item.total || 0), 0);
@@ -499,7 +555,9 @@ function openTrialBalanceReport() {
   const rowsData = [
     ["Caixa/Bancos", "Activo", formatMoney(cash), "Recibos emitidos"],
     ["Clientes", "Activo", formatMoney(receivables), "Facturas por receber"],
+    ["Compras", "Gasto", formatMoney(purchaseCost), "Facturas de compra"],
     ["Vendas", "Rendimento", formatMoney(sales), "Facturas emitidas sem IVA"],
+    ["IVA dedutivel", "Activo", formatMoney(deductibleVat), "Imposto sobre compras"],
     ["IVA liquidado", "Passivo", formatMoney(vat), "Imposto sobre facturas"]
   ];
 
@@ -507,9 +565,9 @@ function openTrialBalanceReport() {
     "Balancete mensal",
     [
       { label: "Vendas", value: formatMoney(sales) },
+      { label: "Compras", value: formatMoney(purchaseCost) },
       { label: "Caixa/Bancos", value: formatMoney(cash) },
-      { label: "Clientes", value: formatMoney(receivables) },
-      { label: "IVA liquidado", value: formatMoney(vat) }
+      { label: "IVA a entregar", value: formatMoney(Math.max(vat - deductibleVat, 0)) }
     ],
     ["Conta", "Classe", "Saldo", "Origem"],
     rowsData
@@ -634,6 +692,7 @@ function renderModuleLocks() {
 
 function renderAll() {
   renderDashboard();
+  renderPurchases();
   renderDocuments();
   renderClients();
   renderReports();
@@ -745,6 +804,7 @@ function exportCurrentData() {
     nuit: activeCompany.nuit,
     generatedAt: new Date().toISOString(),
     documents: activeCompany.documents,
+    purchases: activeCompany.purchases,
     clients: activeCompany.clients
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -1062,6 +1122,10 @@ document.querySelector("#logoutButton").addEventListener("click", () => {
 });
 document.querySelector("#newCompanyButton").addEventListener("click", () => companyDialog.showModal());
 document.querySelector("#newClientButton").addEventListener("click", () => clientDialog.showModal());
+document.querySelector("#newPurchaseButton").addEventListener("click", () => {
+  document.querySelector("#purchaseDateInput").value = new Date().toISOString().slice(0, 10);
+  purchaseDialog.showModal();
+});
 document.querySelector("#newUserButton").addEventListener("click", () => {
   if (!hasModule("Utilizadores")) {
     showToast("Modulo de utilizadores bloqueado nesta licenca.");
@@ -1095,6 +1159,7 @@ exportReportButton.addEventListener("click", () => {
 });
 
 search.addEventListener("input", renderDocuments);
+purchaseSearch.addEventListener("input", renderPurchases);
 statusFilter.addEventListener("change", renderDocuments);
 userSearch.addEventListener("input", renderUsers);
 userStatusFilter.addEventListener("change", renderUsers);
@@ -1144,6 +1209,31 @@ document.querySelector("#createDocumentButton").addEventListener("click", () => 
   renderAll();
   setView("documents");
   showToast(`${type} emitido com sucesso.`);
+});
+
+document.querySelector("#createPurchaseButton").addEventListener("click", () => {
+  const net = Number(document.querySelector("#purchaseNetInput").value || 0);
+  const vatRate = Number(document.querySelector("#purchaseVatRateInput").value || 0);
+  const vat = net * (vatRate / 100);
+  if (net <= 0) {
+    showToast("Informe a base tributavel da compra.");
+    return;
+  }
+  activeCompany.purchases.unshift({
+    number: document.querySelector("#purchaseNumberInput").value.trim(),
+    supplier: document.querySelector("#supplierNameInput").value.trim(),
+    nuit: document.querySelector("#supplierNuitInput").value.trim(),
+    date: document.querySelector("#purchaseDateInput").value || new Date().toISOString().slice(0, 10),
+    description: document.querySelector("#purchaseDescriptionInput").value.trim(),
+    net,
+    vatRate,
+    vat,
+    total: net + vat
+  });
+  saveState();
+  renderAll();
+  setView("purchases");
+  showToast("Factura de compra registada.");
 });
 
 document.querySelector("#createClientButton").addEventListener("click", () => {
@@ -1212,6 +1302,7 @@ document.querySelector("#createCompanyButton").addEventListener("click", () => {
     monthly: Number(document.querySelector("#companyMonthlyInput").value || 0),
     clients: [],
     documents: [],
+    purchases: [],
     users: [
       {
         name: "Administrador",

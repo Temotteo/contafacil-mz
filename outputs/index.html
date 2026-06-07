@@ -66,6 +66,10 @@
             <span class="icon" aria-hidden="true">▤</span>
             Documentos
           </button>
+          <button class="nav-item" data-view="purchases" type="button">
+            <span class="icon" aria-hidden="true">FC</span>
+            Compras
+          </button>
           <button class="nav-item" data-view="clients" type="button">
             <span class="icon" aria-hidden="true">◫</span>
             Clientes
@@ -222,6 +226,41 @@
                 </tr>
               </thead>
               <tbody id="documentRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" id="purchases" aria-labelledby="purchasesTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Fornecedores</p>
+              <h2 id="purchasesTitle">Facturas de compra</h2>
+            </div>
+            <button class="primary-button" type="button" id="newPurchaseButton">Nova compra</button>
+          </div>
+
+          <div class="toolbar">
+            <label>
+              <span>Pesquisar</span>
+              <input id="purchaseSearch" type="search" placeholder="Fornecedor, numero ou NUIT">
+            </label>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Numero</th>
+                  <th>Fornecedor</th>
+                  <th>NUIT</th>
+                  <th>Data</th>
+                  <th>Descricao</th>
+                  <th class="numeric">Base</th>
+                  <th class="numeric">IVA</th>
+                  <th class="numeric">Total</th>
+                </tr>
+              </thead>
+              <tbody id="purchaseRows"></tbody>
             </table>
           </div>
         </section>
@@ -456,6 +495,57 @@
         <div class="modal-actions">
           <button class="secondary-button" id="exportReportButton" type="button">Exportar CSV</button>
           <button class="ghost-button" value="cancel" type="submit">Fechar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="purchaseDialog">
+      <form method="dialog" class="document-form">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Compra</p>
+            <h2>Nova factura de compra</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">Ã—</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>Numero da factura</span>
+            <input id="purchaseNumberInput" type="text" value="FC 2026/001">
+          </label>
+          <label>
+            <span>Data</span>
+            <input id="purchaseDateInput" type="date">
+          </label>
+          <label>
+            <span>Fornecedor</span>
+            <input id="supplierNameInput" type="text" value="Fornecedor Maputo, Lda.">
+          </label>
+          <label>
+            <span>NUIT do fornecedor</span>
+            <input id="supplierNuitInput" type="text" value="600112233">
+          </label>
+          <label>
+            <span>Descricao</span>
+            <input id="purchaseDescriptionInput" type="text" value="Compra de mercadoria">
+          </label>
+          <label>
+            <span>Base tributavel</span>
+            <input id="purchaseNetInput" type="number" min="0" step="0.01" value="50000">
+          </label>
+          <label>
+            <span>IVA</span>
+            <select id="purchaseVatRateInput">
+              <option value="16" selected>16%</option>
+              <option value="0">Isento</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-button" id="createPurchaseButton" value="default" type="submit">Guardar compra</button>
         </div>
       </form>
     </dialog>
