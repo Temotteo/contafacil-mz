@@ -177,11 +177,15 @@ const passwordTitle = document.querySelector("#passwordTitle");
 const passwordUserName = document.querySelector("#passwordUserName");
 const newPasswordInput = document.querySelector("#newPasswordInput");
 const confirmPasswordInput = document.querySelector("#confirmPasswordInput");
+const clientDialogTitle = document.querySelector("#clientDialogTitle");
+const companyDialogTitle = document.querySelector("#companyDialogTitle");
 const toast = document.querySelector("#toast");
 let currentReportCsv = "";
 let selectedLeadId = null;
 let selectedPermissionEmail = null;
 let selectedPasswordEmail = null;
+let editingClientNuit = null;
+let editingCompanyNuit = null;
 
 const permissionCatalog = [
   { key: "documents.view", group: "Documentos", label: "Ver documentos" },
@@ -264,7 +268,7 @@ function normalizeUserPermissions(user) {
   user.permissions = Array.isArray(user.permissions) && user.permissions.length
     ? user.permissions
     : permissionsForRole(user.role);
-  user.password = user.password || "demo123";
+  user.password = String(user.password || "").trim() || "demo123";
 }
 
 function normalizeDocuments() {
@@ -587,6 +591,9 @@ function renderClients() {
           <span>NIB: ${client.bank.nib}</span>
         </div>
         <small>${formatMoney(total)} facturados</small>
+        <div class="row-actions">
+          <button type="button" data-action="edit-client" data-nuit="${client.nuit}">Editar</button>
+        </div>
       </article>
     `;
   }).join("");
@@ -594,6 +601,56 @@ function renderClients() {
   clientInput.innerHTML = activeCompany.clients
     .map((client) => `<option>${client.name}</option>`)
     .join("");
+}
+
+function clientFormData() {
+  return {
+    name: document.querySelector("#clientNameInput").value.trim(),
+    nuit: document.querySelector("#clientNuitInput").value.trim(),
+    city: document.querySelector("#clientCityInput").value.trim(),
+    address: document.querySelector("#clientAddressInput").value.trim(),
+    bank: {
+      bankName: document.querySelector("#clientBankNameInput").value.trim(),
+      accountNumber: document.querySelector("#clientAccountNumberInput").value.trim(),
+      swift: document.querySelector("#clientSwiftInput").value.trim(),
+      nib: document.querySelector("#clientNibInput").value.trim()
+    }
+  };
+}
+
+function openNewClientDialog() {
+  editingClientNuit = null;
+  clientDialogTitle.textContent = "Novo cliente";
+  document.querySelector("#createClientButton").textContent = "Guardar cliente";
+  document.querySelector("#clientNameInput").value = "Distribuidora Zambeze";
+  document.querySelector("#clientNuitInput").value = "403998221";
+  document.querySelector("#clientCityInput").value = "Maputo";
+  document.querySelector("#clientAddressInput").value = "Av. 25 de Setembro, Maputo";
+  document.querySelector("#clientBankNameInput").value = "BCI";
+  document.querySelector("#clientAccountNumberInput").value = "1234567890";
+  document.querySelector("#clientSwiftInput").value = "CGDIMZMA";
+  document.querySelector("#clientNibInput").value = "0008.0000.12345678.901.11";
+  clientDialog.showModal();
+}
+
+function openEditClientDialog(nuit) {
+  const client = activeCompany.clients.find((item) => item.nuit === nuit);
+  if (!client) {
+    showToast("Cliente nao encontrado.");
+    return;
+  }
+  editingClientNuit = client.nuit;
+  clientDialogTitle.textContent = "Editar cliente";
+  document.querySelector("#createClientButton").textContent = "Guardar alteracoes";
+  document.querySelector("#clientNameInput").value = client.name || "";
+  document.querySelector("#clientNuitInput").value = client.nuit || "";
+  document.querySelector("#clientCityInput").value = client.city || "";
+  document.querySelector("#clientAddressInput").value = client.address || "";
+  document.querySelector("#clientBankNameInput").value = client.bank?.bankName || "";
+  document.querySelector("#clientAccountNumberInput").value = client.bank?.accountNumber || "";
+  document.querySelector("#clientSwiftInput").value = client.bank?.swift || "";
+  document.querySelector("#clientNibInput").value = client.bank?.nib || "";
+  clientDialog.showModal();
 }
 
 function renderLeads() {
@@ -936,6 +993,7 @@ function renderLicenses() {
       <td>
         <div class="row-actions">
           <button type="button" data-action="view-company" data-nuit="${company.nuit}">Entrar</button>
+          <button type="button" data-action="edit-company" data-nuit="${company.nuit}">Editar</button>
           <button type="button" data-action="toggle-reports" data-nuit="${company.nuit}">Relatorios</button>
           <button type="button" data-action="toggle-projects" data-nuit="${company.nuit}">Projectos</button>
           <button type="button" data-action="toggle-leads" data-nuit="${company.nuit}">Leads</button>
@@ -944,6 +1002,55 @@ function renderLicenses() {
       </td>
     </tr>
   `).join("");
+}
+
+function companyFormData() {
+  const modules = [...companyDialog.querySelectorAll(".module-fieldset input:checked")].map((input) => input.value);
+  return {
+    name: document.querySelector("#companyNameInput").value.trim(),
+    nuit: document.querySelector("#companyNuitInput").value.trim(),
+    address: document.querySelector("#companyAddressInput").value.trim(),
+    plan: document.querySelector("#companyPlanInput").value,
+    modules,
+    monthly: Number(document.querySelector("#companyMonthlyInput").value || 0)
+  };
+}
+
+function setCompanyModules(modules) {
+  companyDialog.querySelectorAll(".module-fieldset input").forEach((input) => {
+    input.checked = modules.includes(input.value);
+  });
+}
+
+function openNewCompanyDialog() {
+  editingCompanyNuit = null;
+  companyDialogTitle.textContent = "Nova empresa";
+  document.querySelector("#createCompanyButton").textContent = "Criar licenca";
+  document.querySelector("#companyNameInput").value = "Comercial Nacala, Lda.";
+  document.querySelector("#companyNuitInput").value = "404775331";
+  document.querySelector("#companyAddressInput").value = "Av. Samora Machel, Nacala";
+  document.querySelector("#companyPlanInput").value = "Profissional";
+  document.querySelector("#companyMonthlyInput").value = "12500";
+  setCompanyModules(["Facturacao", "Recibos", "IVA", "Relatorios", "Projectos", "Leads"]);
+  companyDialog.showModal();
+}
+
+function openEditCompanyDialog(nuit) {
+  const company = state.companies.find((item) => item.nuit === nuit);
+  if (!company) {
+    showToast("Empresa nao encontrada.");
+    return;
+  }
+  editingCompanyNuit = company.nuit;
+  companyDialogTitle.textContent = "Editar empresa";
+  document.querySelector("#createCompanyButton").textContent = "Guardar alteracoes";
+  document.querySelector("#companyNameInput").value = company.name || "";
+  document.querySelector("#companyNuitInput").value = company.nuit || "";
+  document.querySelector("#companyAddressInput").value = company.address || "";
+  document.querySelector("#companyPlanInput").value = company.plan || "Essencial";
+  document.querySelector("#companyMonthlyInput").value = Number(company.monthly || 0);
+  setCompanyModules(Array.isArray(company.modules) ? company.modules : []);
+  companyDialog.showModal();
 }
 
 function renderModuleLocks() {
@@ -1451,8 +1558,8 @@ document.querySelector("#logoutButton").addEventListener("click", () => {
   currentUser = null;
   showToast("Sessao terminada.");
 });
-document.querySelector("#newCompanyButton").addEventListener("click", () => companyDialog.showModal());
-document.querySelector("#newClientButton").addEventListener("click", () => clientDialog.showModal());
+document.querySelector("#newCompanyButton").addEventListener("click", openNewCompanyDialog);
+document.querySelector("#newClientButton").addEventListener("click", openNewClientDialog);
 document.querySelector("#newLeadButton").addEventListener("click", () => {
   if (!hasModule("Leads")) {
     showToast("Modulo de leads bloqueado nesta licenca.");
@@ -1642,23 +1749,41 @@ document.querySelector("#createLeadCallButton").addEventListener("click", () => 
   showToast("Chamada registada.");
 });
 
-document.querySelector("#createClientButton").addEventListener("click", () => {
-  activeCompany.clients.push({
-    name: document.querySelector("#clientNameInput").value.trim(),
-    nuit: document.querySelector("#clientNuitInput").value.trim(),
-    city: document.querySelector("#clientCityInput").value.trim(),
-    address: document.querySelector("#clientAddressInput").value.trim(),
-    bank: {
-      bankName: document.querySelector("#clientBankNameInput").value.trim(),
-      accountNumber: document.querySelector("#clientAccountNumberInput").value.trim(),
-      swift: document.querySelector("#clientSwiftInput").value.trim(),
-      nib: document.querySelector("#clientNibInput").value.trim()
+document.querySelector("#createClientButton").addEventListener("click", (event) => {
+  const data = clientFormData();
+  const duplicate = activeCompany.clients.some((client) => client.nuit === data.nuit && client.nuit !== editingClientNuit);
+  if (!data.name || !data.nuit || duplicate) {
+    event.preventDefault();
+    showToast(duplicate ? "Ja existe cliente com este NUIT." : "Nome e NUIT do cliente sao obrigatorios.");
+    return;
+  }
+  if (editingClientNuit) {
+    const client = activeCompany.clients.find((item) => item.nuit === editingClientNuit);
+    if (!client) {
+      showToast("Cliente nao encontrado.");
+      return;
     }
-  });
+    const oldName = client.name;
+    Object.assign(client, data);
+    activeCompany.documents.forEach((documentItem) => {
+      if (documentItem.client === oldName) {
+        documentItem.client = data.name;
+      }
+    });
+    activeCompany.projects?.forEach((project) => {
+      if (project.client === oldName) {
+        project.client = data.name;
+      }
+    });
+    editingClientNuit = null;
+    showToast("Cliente actualizado.");
+  } else {
+    activeCompany.clients.push(data);
+    showToast("Cliente criado.");
+  }
   saveState();
   renderAll();
   setView("clients");
-  showToast("Cliente criado.");
 });
 
 document.querySelector("#createUserButton").addEventListener("click", () => {
@@ -1701,6 +1826,12 @@ document.querySelector("#savePasswordButton").addEventListener("click", (event) 
   saveState();
   renderUsers();
   showToast("Password actualizada.");
+});
+
+clientCards.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button || button.dataset.action !== "edit-client") return;
+  openEditClientDialog(button.dataset.nuit);
 });
 
 document.querySelector("#savePermissionsButton").addEventListener("click", () => {
@@ -1769,34 +1900,52 @@ leadCards.addEventListener("click", (event) => {
   }
 });
 
-document.querySelector("#createCompanyButton").addEventListener("click", () => {
-  const modules = [...companyDialog.querySelectorAll(".module-fieldset input:checked")].map((input) => input.value);
-  state.companies.push({
-    name: document.querySelector("#companyNameInput").value.trim(),
-    nuit: document.querySelector("#companyNuitInput").value.trim(),
-    address: document.querySelector("#companyAddressInput").value.trim(),
-    plan: document.querySelector("#companyPlanInput").value,
-    status: "Activa",
-    modules,
-    monthly: Number(document.querySelector("#companyMonthlyInput").value || 0),
-    clients: [],
-    documents: [],
-    purchases: [],
-    projects: [],
-    leads: [],
-    users: [
-      {
-        name: "Administrador",
-        email: `admin@${document.querySelector("#companyNuitInput").value.trim()}.co.mz`,
-        role: "Administrador",
-        status: "Activo",
-        lastAccess: "-"
-      }
-    ]
-  });
+document.querySelector("#createCompanyButton").addEventListener("click", (event) => {
+  const data = companyFormData();
+  const duplicate = state.companies.some((company) => company.nuit === data.nuit && company.nuit !== editingCompanyNuit);
+  if (!data.name || !data.nuit || duplicate) {
+    event.preventDefault();
+    showToast(duplicate ? "Ja existe empresa com este NUIT." : "Nome e NUIT da empresa sao obrigatorios.");
+    return;
+  }
+  if (editingCompanyNuit) {
+    const company = state.companies.find((item) => item.nuit === editingCompanyNuit);
+    if (!company) {
+      showToast("Empresa nao encontrada.");
+      return;
+    }
+    Object.assign(company, data);
+    if (activeCompany === company) {
+      activeCompanyName.textContent = company.name;
+      accountPill.textContent = `${currentUser?.name || "Utilizador"} | NUIT ${company.nuit}`;
+      planName.textContent = company.plan;
+    }
+    editingCompanyNuit = null;
+    showToast("Empresa actualizada.");
+  } else {
+    state.companies.push({
+      ...data,
+      status: "Activa",
+      clients: [],
+      documents: [],
+      purchases: [],
+      projects: [],
+      leads: [],
+      users: [
+        {
+          name: "Administrador",
+          email: `admin@${data.nuit}.co.mz`,
+          role: "Administrador",
+          status: "Activo",
+          lastAccess: "-",
+          password: "demo123"
+        }
+      ]
+    });
+    showToast("Nova licenca criada.");
+  }
   saveState();
   renderAll();
-  showToast("Nova licenca criada.");
 });
 
 licenseRows.addEventListener("click", (event) => {
@@ -1808,6 +1957,11 @@ licenseRows.addEventListener("click", (event) => {
   if (button.dataset.action === "toggle-license") {
     company.status = company.status === "Activa" ? "Suspensa" : "Activa";
     showToast(`${company.name}: licenca ${company.status.toLowerCase()}.`);
+  }
+
+  if (button.dataset.action === "edit-company") {
+    openEditCompanyDialog(company.nuit);
+    return;
   }
 
   if (button.dataset.action === "toggle-reports") {
