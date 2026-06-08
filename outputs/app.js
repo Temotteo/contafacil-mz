@@ -618,12 +618,20 @@ function clientFormData() {
   };
 }
 
+function nextAvailableNuit(existingNuits, start = 404000001) {
+  let next = start;
+  while (existingNuits.includes(String(next))) {
+    next += 1;
+  }
+  return String(next);
+}
+
 function openNewClientDialog() {
   editingClientNuit = null;
   clientDialogTitle.textContent = "Novo cliente";
   document.querySelector("#createClientButton").textContent = "Guardar cliente";
   document.querySelector("#clientNameInput").value = "Distribuidora Zambeze";
-  document.querySelector("#clientNuitInput").value = "403998221";
+  document.querySelector("#clientNuitInput").value = nextAvailableNuit(activeCompany.clients.map((client) => client.nuit), 403998221);
   document.querySelector("#clientCityInput").value = "Maputo";
   document.querySelector("#clientAddressInput").value = "Av. 25 de Setembro, Maputo";
   document.querySelector("#clientBankNameInput").value = "BCI";
@@ -1027,7 +1035,7 @@ function openNewCompanyDialog() {
   companyDialogTitle.textContent = "Nova empresa";
   document.querySelector("#createCompanyButton").textContent = "Criar licenca";
   document.querySelector("#companyNameInput").value = "Comercial Nacala, Lda.";
-  document.querySelector("#companyNuitInput").value = "404775331";
+  document.querySelector("#companyNuitInput").value = nextAvailableNuit(state.companies.map((company) => company.nuit), 404775331);
   document.querySelector("#companyAddressInput").value = "Av. Samora Machel, Nacala";
   document.querySelector("#companyPlanInput").value = "Profissional";
   document.querySelector("#companyMonthlyInput").value = "12500";
@@ -1784,6 +1792,7 @@ document.querySelector("#createClientButton").addEventListener("click", (event) 
   saveState();
   renderAll();
   setView("clients");
+  clientDialog.close();
 });
 
 document.querySelector("#createUserButton").addEventListener("click", () => {
@@ -1946,6 +1955,7 @@ document.querySelector("#createCompanyButton").addEventListener("click", (event)
   }
   saveState();
   renderAll();
+  companyDialog.close();
 });
 
 licenseRows.addEventListener("click", (event) => {
