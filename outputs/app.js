@@ -98,6 +98,7 @@ const seedState = {
 let state = loadState();
 let loginRole = "company";
 let currentRole = null;
+let currentUser = null;
 let activeCompany = state.companies[0];
 let selectedDocumentNumber = null;
 
@@ -116,6 +117,8 @@ const authScreen = document.querySelector("#authScreen");
 const appShell = document.querySelector("#appShell");
 const loginForm = document.querySelector("#loginForm");
 const loginIdentity = document.querySelector("#loginIdentity");
+const loginEmailField = document.querySelector("#loginEmailField");
+const loginEmail = document.querySelector("#loginEmail");
 const identityLabel = document.querySelector("#identityLabel");
 const activeCompanyName = document.querySelector("#activeCompanyName");
 const accountPill = document.querySelector("#accountPill");
@@ -965,18 +968,19 @@ function renderAll() {
   renderModuleLocks();
 }
 
-function applySession(role, company = state.companies[0]) {
+function applySession(role, company = state.companies[0], user = null) {
   if (role === "company" && company.status !== "Activa") {
     showToast("Esta licenca esta suspensa. Contacte o administrador.");
     return;
   }
 
   currentRole = role;
+  currentUser = role === "company" ? user : null;
   activeCompany = company;
   authScreen.classList.add("is-hidden");
   appShell.classList.remove("is-locked");
   activeCompanyName.textContent = role === "admin" ? "Admin ContaFacil MZ" : company.name;
-  accountPill.textContent = role === "admin" ? "Administrador" : `NUIT ${company.nuit}`;
+  accountPill.textContent = role === "admin" ? "Administrador" : `${user?.name || "Utilizador"} | NUIT ${company.nuit}`;
   planName.textContent = role === "admin" ? "Gestao SaaS" : company.plan;
 
   document.querySelector(".admin-nav").hidden = role !== "admin";
@@ -986,7 +990,7 @@ function applySession(role, company = state.companies[0]) {
   document.querySelector("#newReceiptButton").hidden = role === "admin";
   renderAll();
   setView(role === "admin" ? "admin" : "dashboard");
-  showToast(role === "admin" ? "Sessao admin iniciada." : `Sessao iniciada para ${company.name}.`);
+  showToast(role === "admin" ? "Sessao admin iniciada." : `Sessao iniciada para ${user?.name || company.name}.`);
 }
 
 function updateLoginRole(role) {
@@ -996,6 +1000,8 @@ function updateLoginRole(role) {
   });
   identityLabel.textContent = role === "admin" ? "Email do administrador" : "NUIT da empresa";
   loginIdentity.value = role === "admin" ? "admin@contafacilmz.co.mz" : "400884112";
+  loginEmailField.hidden = role === "admin";
+  loginEmail.value = role === "admin" ? "" : "armando@padaria.co.mz";
 }
 
 function addLineItemRow(item = { description: "Produto ou servico", quantity: 1, unitPrice: 120000, vatRate: VAT_RATE }) {
@@ -1389,7 +1395,17 @@ document.querySelectorAll("[data-login-role]").forEach((button) => {
 document.querySelectorAll("[data-demo-login]").forEach((button) => {
   button.addEventListener("click", () => {
     updateLoginRole(button.dataset.demoLogin);
-    applySession(button.dataset.demoLogin, state.companies[0]);
+    if (button.dataset.demoLogin === "admin") {
+      applySession("admin");
+      return;
+    }
+    const company = state.companies[0];
+    company.users.forEach(normalizeUserPermissions);
+    const user = company.users.find((item) => item.status === "Activo") || company.users[0];
+    loginIdentity.value = company.nuit;
+    loginEmail.value = user.email;
+    document.querySelector("#loginPassword").value = user.password;
+    applySession("company", company, user);
   });
 });
 
@@ -1405,13 +1421,22 @@ loginForm.addEventListener("submit", (event) => {
     return;
   }
   company.users.forEach(normalizeUserPermissions);
+  const email = loginEmail.value.trim().toLowerCase();
   const password = document.querySelector("#loginPassword").value;
-  const canAccess = company.users.some((user) => user.status === "Activo" && user.password === password);
-  if (!canAccess) {
-    showToast("Palavra-passe invalida ou utilizador bloqueado.");
+  const user = company.users.find((item) => item.email.toLowerCase() === email);
+  if (!user) {
+    showToast("Email do utilizador nao encontrado nesta empresa.");
     return;
   }
-  applySession("company", company);
+  if (user.status !== "Activo") {
+    showToast("Este utilizador esta bloqueado.");
+    return;
+  }
+  if (user.password !== password) {
+    showToast("Palavra-passe invalida.");
+    return;
+  }
+  applySession("company", company, user);
 });
 
 document.querySelector("#newInvoiceButton").addEventListener("click", () => openDocumentDialog("Factura"));
@@ -1423,6 +1448,7 @@ document.querySelector("#logoutButton").addEventListener("click", () => {
   appShell.classList.add("is-locked");
   authScreen.classList.remove("is-hidden");
   currentRole = null;
+  currentUser = null;
   showToast("Sessao terminada.");
 });
 document.querySelector("#newCompanyButton").addEventListener("click", () => companyDialog.showModal());
@@ -1814,7 +1840,9 @@ licenseRows.addEventListener("click", (event) => {
   }
 
   if (button.dataset.action === "view-company") {
-    applySession("company", company);
+    company.users.forEach(normalizeUserPermissions);
+    const user = company.users.find((item) => item.status === "Activo") || company.users[0] || null;
+    applySession("company", company, user);
   }
 
   saveState();
