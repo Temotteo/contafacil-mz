@@ -293,6 +293,16 @@ h3 {
   justify-content: flex-end;
 }
 
+.document-action-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.document-action-group button {
+  white-space: nowrap;
+}
+
 .account-pill {
   display: inline-flex;
   align-items: center;
@@ -1048,6 +1058,10 @@ dialog::backdrop {
 
   .period-switch,
   .topbar-actions {
+    width: 100%;
+  }
+
+  .document-action-group {
     width: 100%;
   }
 

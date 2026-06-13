@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ContaFácil MZ | Facturação e Recibos</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=document-actions-line-20260613">
   </head>
   <body>
     <section class="auth-screen" id="authScreen" aria-labelledby="loginTitle">
@@ -116,8 +116,11 @@
           <div class="topbar-actions">
             <span class="account-pill" id="accountPill">Empresa demo</span>
             <button class="ghost-button" id="exportButton" type="button">Exportar</button>
-            <button class="ghost-button" id="newQuoteButton" type="button">Novo orÃ§amento</button>
-            <button class="primary-button" id="newInvoiceButton" type="button">Nova factura</button>
+            <div class="document-action-group" aria-label="Criar documentos">
+              <button class="ghost-button" id="newQuoteButton" type="button">Novo orÃ§amento</button>
+              <button class="primary-button" id="newInvoiceButton" type="button">Nova factura</button>
+              <button class="primary-button" type="button" id="newReceiptButton">Emitir recibo</button>
+            </div>
             <button class="ghost-button" id="logoutButton" type="button">Sair</button>
           </div>
         </header>
@@ -205,7 +208,6 @@
               <p class="eyebrow">Facturas e recibos</p>
               <h2 id="documentsTitle">Documentos comerciais</h2>
             </div>
-            <button class="primary-button" type="button" id="newReceiptButton">Emitir recibo</button>
           </div>
 
           <div class="toolbar">
@@ -902,6 +904,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=buttons-fix-20260608"></script>
+    <script src="app.js?v=document-actions-line-20260613"></script>
   </body>
 </html>
