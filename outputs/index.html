@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ContaFácil MZ | Facturação e Recibos</title>
-    <link rel="stylesheet" href="styles.css?v=document-actions-line-20260613">
+    <link rel="stylesheet" href="styles.css?v=purchase-classification-20260613">
   </head>
   <body>
     <section class="auth-screen" id="authScreen" aria-labelledby="loginTitle">
@@ -256,10 +256,16 @@
             <button class="primary-button" type="button" id="newPurchaseButton">Nova compra</button>
           </div>
 
-          <div class="toolbar">
+          <div class="toolbar purchase-toolbar">
             <label>
               <span>Pesquisar</span>
-              <input id="purchaseSearch" type="search" placeholder="Fornecedor, numero ou NUIT">
+              <input id="purchaseSearch" type="search" placeholder="Fornecedor, numero, NUIT ou conta">
+            </label>
+            <label>
+              <span>Classificação</span>
+              <select id="purchaseClassFilter">
+                <option value="all">Todas</option>
+              </select>
             </label>
           </div>
 
@@ -272,6 +278,7 @@
                   <th>NUIT</th>
                   <th>Data</th>
                   <th>Descricao</th>
+                  <th>Classificação</th>
                   <th>Projecto</th>
                   <th class="numeric">Base</th>
                   <th class="numeric">IVA</th>
@@ -584,6 +591,10 @@
             <input id="purchaseDescriptionInput" type="text" value="Compra de mercadoria">
           </label>
           <label>
+            <span>Classificação contabilística</span>
+            <select id="purchaseClassInput"></select>
+          </label>
+          <label>
             <span>Base tributavel</span>
             <input id="purchaseNetInput" type="number" min="0" step="0.01" value="50000">
           </label>
@@ -602,7 +613,7 @@
 
         <div class="modal-actions">
           <button class="ghost-button" value="cancel" type="submit">Cancelar</button>
-          <button class="primary-button" id="createPurchaseButton" value="default" type="submit">Guardar compra</button>
+          <button class="primary-button" id="createPurchaseButton" value="default" type="button">Guardar compra</button>
         </div>
       </form>
     </dialog>
@@ -904,6 +915,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=document-actions-line-20260613"></script>
+    <script src="app.js?v=purchase-classification-20260613"></script>
   </body>
 </html>

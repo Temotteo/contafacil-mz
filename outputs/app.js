@@ -131,6 +131,7 @@ const rows = document.querySelector("#documentRows");
 const purchaseRows = document.querySelector("#purchaseRows");
 const search = document.querySelector("#documentSearch");
 const purchaseSearch = document.querySelector("#purchaseSearch");
+const purchaseClassFilter = document.querySelector("#purchaseClassFilter");
 const statusFilter = document.querySelector("#statusFilter");
 const userRows = document.querySelector("#userRows");
 const userSearch = document.querySelector("#userSearch");
@@ -202,6 +203,21 @@ const permissionCatalog = [
   { key: "users.manage", group: "Utilizadores", label: "Gerir utilizadores" }
 ];
 
+const purchaseClassificationCatalog = [
+  { key: "31-mercadorias", account: "31", label: "Compras de mercadorias", group: "Inventários", vat: "IVA dedutível quando documentado" },
+  { key: "32-materias", account: "32", label: "Matérias-primas e materiais de consumo", group: "Inventários", vat: "IVA dedutível quando documentado" },
+  { key: "42-activos-fixos", account: "42", label: "Activos fixos tangíveis", group: "Investimento", vat: "Capitalizar e amortizar" },
+  { key: "43-activos-intangiveis", account: "43", label: "Activos intangíveis / software", group: "Investimento", vat: "Capitalizar se aplicável" },
+  { key: "62-servicos-externos", account: "62", label: "Fornecimentos e serviços externos", group: "Gastos operacionais", vat: "IVA dedutível quando documentado" },
+  { key: "622-rendas", account: "622", label: "Rendas e alugueres", group: "Gastos operacionais", vat: "Ver contrato e factura" },
+  { key: "623-comunicacoes", account: "623", label: "Comunicações, internet e telefone", group: "Gastos operacionais", vat: "IVA dedutível quando documentado" },
+  { key: "624-energia-agua", account: "624", label: "Energia, água e combustíveis", group: "Gastos operacionais", vat: "Confirmar dedutibilidade específica" },
+  { key: "625-deslocacoes", account: "625", label: "Deslocações, estadias e refeições", group: "Gastos operacionais", vat: "Atenção a limites de dedução" },
+  { key: "63-impostos-taxas", account: "63", label: "Impostos, taxas e licenças", group: "Gastos fiscais", vat: "Normalmente sem IVA dedutível" },
+  { key: "64-pessoal", account: "64", label: "Gastos com pessoal", group: "Recursos humanos", vat: "Sem IVA dedutível" },
+  { key: "68-outros-gastos", account: "68", label: "Outros gastos operacionais", group: "Outros gastos", vat: "Classificar com suporte documental" }
+];
+
 function loadState() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -233,6 +249,33 @@ function normalizeClientBankDetails(client) {
     swift: client.bank?.swift || defaults.swift,
     nib: client.bank?.nib || defaults.nib
   };
+}
+
+function getPurchaseClassification(key) {
+  return purchaseClassificationCatalog.find((item) => item.key === key) || purchaseClassificationCatalog[0];
+}
+
+function suggestPurchaseClassification(description = "") {
+  const text = description.toLowerCase();
+  if (/(software|licen|sistema|dominio|hosting|aplicativo)/.test(text)) return "43-activos-intangiveis";
+  if (/(maquina|equipamento|computador|viatura|mobiliario|obra|construcao)/.test(text)) return "42-activos-fixos";
+  if (/(farinha|materia|materiais|consumiveis|embalagem|sacos|stock|inventario)/.test(text)) return "32-materias";
+  if (/(mercadoria|revenda|produto para venda)/.test(text)) return "31-mercadorias";
+  if (/(renda|aluguer|arrendamento)/.test(text)) return "622-rendas";
+  if (/(telefone|internet|comunicacao|dados)/.test(text)) return "623-comunicacoes";
+  if (/(energia|electricidade|agua|combustivel|gasolina|diesel)/.test(text)) return "624-energia-agua";
+  if (/(hotel|viagem|desloca|refeicao|estadia)/.test(text)) return "625-deslocacoes";
+  if (/(imposto|taxa|licenca|multa)/.test(text)) return "63-impostos-taxas";
+  if (/(salario|remuneracao|subsidio|pessoal)/.test(text)) return "64-pessoal";
+  return "62-servicos-externos";
+}
+
+function classificationOptionHtml(selected = "") {
+  return purchaseClassificationCatalog.map((item) => `
+    <option value="${item.key}" ${item.key === selected ? "selected" : ""}>
+      ${item.account} - ${item.label}
+    </option>
+  `).join("");
 }
 
 function permissionsForRole(role) {
@@ -334,10 +377,14 @@ function normalizeDocuments() {
     company.purchases.forEach((purchase) => {
       const net = Number(purchase.net || 0);
       const vatRate = Number(purchase.vatRate ?? VAT_RATE);
+      const classification = getPurchaseClassification(purchase.classification || suggestPurchaseClassification(purchase.description));
       purchase.vatRate = vatRate;
       purchase.vat = net * (vatRate / 100);
       purchase.total = net + purchase.vat;
       purchase.project = purchase.project || "";
+      purchase.classification = classification.key;
+      purchase.account = classification.account;
+      purchase.accountName = classification.label;
     });
   });
 }
@@ -485,23 +532,47 @@ function renderDashboard() {
   document.querySelector("#metricReceiptNote").textContent = receipts[0] ? `Ultimo recibo: ${receipts[0].number}` : "Sem recibos emitidos";
 }
 
+function syncPurchaseClassificationFields(selected = "") {
+  const selectedValue = selected || document.querySelector("#purchaseClassInput")?.value || "62-servicos-externos";
+  document.querySelector("#purchaseClassInput").innerHTML = classificationOptionHtml(selectedValue);
+  purchaseClassFilter.innerHTML = `
+    <option value="all">Todas</option>
+    ${purchaseClassificationCatalog.map((item) => `<option value="${item.key}" ${purchaseClassFilter.value === item.key ? "selected" : ""}>${item.account} - ${item.label}</option>`).join("")}
+  `;
+}
+
 function renderPurchases() {
   const query = purchaseSearch.value.trim().toLowerCase();
+  const selectedClass = purchaseClassFilter.value;
   const filtered = (activeCompany.purchases || []).filter((purchase) => {
-    return [purchase.number, purchase.supplier, purchase.nuit, purchase.description].join(" ").toLowerCase().includes(query);
+    const classification = getPurchaseClassification(purchase.classification);
+    const matchesQuery = [purchase.number, purchase.supplier, purchase.nuit, purchase.description, classification.account, classification.label, classification.group].join(" ").toLowerCase().includes(query);
+    const matchesClass = selectedClass === "all" || purchase.classification === selectedClass;
+    return matchesQuery && matchesClass;
   });
 
   purchaseRows.innerHTML = filtered.map((purchase) => `
     <tr>
+      ${(() => {
+        const classification = getPurchaseClassification(purchase.classification);
+        return `
       <td><strong>${purchase.number}</strong></td>
       <td>${purchase.supplier}</td>
       <td>${purchase.nuit}</td>
       <td>${formatDate(purchase.date)}</td>
       <td>${purchase.description}</td>
+      <td>
+        <span class="account-badge">${classification.account}</span>
+        <select class="purchase-class-select" data-number="${purchase.number}">
+          ${classificationOptionHtml(purchase.classification)}
+        </select>
+      </td>
       <td>${purchase.project || "-"}</td>
       <td class="numeric">${formatMoney(purchase.net)}</td>
       <td class="numeric">${Number(purchase.vatRate || 0)}% - ${formatMoney(purchase.vat)}</td>
       <td class="numeric">${formatMoney(purchase.total)}</td>
+        `;
+      })()}
     </tr>
   `).join("");
 }
@@ -782,6 +853,7 @@ function openVatReport() {
     item.type,
     item.client,
     formatDate(item.date),
+    "-",
     formatMoney(item.net),
     formatMoney(item.vat),
     formatMoney(item.total),
@@ -792,6 +864,7 @@ function openVatReport() {
     "Compra",
     item.supplier,
     formatDate(item.date),
+    `${getPurchaseClassification(item.classification).account} - ${getPurchaseClassification(item.classification).label}`,
     formatMoney(item.net),
     `-${formatMoney(item.vat)}`,
     formatMoney(item.total),
@@ -807,7 +880,7 @@ function openVatReport() {
       { label: "IVA dedutivel", value: formatMoney(deductibleVat) },
       { label: "IVA a entregar", value: formatMoney(Math.max(invoiceVat - deductibleVat, 0)) }
     ],
-    ["Documento", "Tipo", "Cliente", "Data", "Base", "IVA", "Total", "Estado"],
+    ["Documento", "Tipo", "Cliente/Fornecedor", "Data", "Classificacao", "Base", "IVA", "Total", "Estado"],
     rowsData
   );
 }
@@ -820,6 +893,14 @@ function openTrialBalanceReport() {
   const vat = invoices.reduce((sum, item) => sum + Number(item.vat || 0), 0);
   const purchaseCost = purchases.reduce((sum, item) => sum + Number(item.net || 0), 0);
   const deductibleVat = purchases.reduce((sum, item) => sum + Number(item.vat || 0), 0);
+  const purchaseAccounts = purchaseClassificationCatalog
+    .map((classification) => {
+      const total = purchases
+        .filter((item) => item.classification === classification.key)
+        .reduce((sum, item) => sum + Number(item.net || 0), 0);
+      return total > 0 ? [`${classification.account} - ${classification.label}`, classification.group, formatMoney(total), classification.vat] : null;
+    })
+    .filter(Boolean);
   const receivables = invoices
     .filter((item) => getDocumentStatus(item) !== "Pago")
     .reduce((sum, item) => sum + Number(item.total || 0), 0);
@@ -827,7 +908,7 @@ function openTrialBalanceReport() {
   const rowsData = [
     ["Caixa/Bancos", "Activo", formatMoney(cash), "Recibos emitidos"],
     ["Clientes", "Activo", formatMoney(receivables), "Facturas por receber"],
-    ["Compras", "Gasto", formatMoney(purchaseCost), "Facturas de compra"],
+    ...purchaseAccounts,
     ["Vendas", "Rendimento", formatMoney(sales), "Facturas emitidas sem IVA"],
     ["IVA dedutivel", "Activo", formatMoney(deductibleVat), "Imposto sobre compras"],
     ["IVA liquidado", "Passivo", formatMoney(vat), "Imposto sobre facturas"]
@@ -1071,6 +1152,7 @@ function renderModuleLocks() {
 
 function renderAll() {
   renderDashboard();
+  syncPurchaseClassificationFields();
   renderPurchases();
   renderDocuments();
   renderClients();
@@ -1585,6 +1667,7 @@ document.querySelector("#newProjectButton").addEventListener("click", () => {
 });
 document.querySelector("#newPurchaseButton").addEventListener("click", () => {
   document.querySelector("#purchaseDateInput").value = new Date().toISOString().slice(0, 10);
+  syncPurchaseClassificationFields(suggestPurchaseClassification(document.querySelector("#purchaseDescriptionInput").value));
   syncProjectFields();
   purchaseDialog.showModal();
 });
@@ -1622,8 +1705,28 @@ exportReportButton.addEventListener("click", () => {
 
 search.addEventListener("input", renderDocuments);
 purchaseSearch.addEventListener("input", renderPurchases);
+purchaseClassFilter.addEventListener("change", renderPurchases);
+purchaseRows.addEventListener("change", (event) => {
+  const select = event.target.closest(".purchase-class-select");
+  if (!select) return;
+  const purchase = activeCompany.purchases.find((item) => item.number === select.dataset.number);
+  if (!purchase) return;
+  const classification = getPurchaseClassification(select.value);
+  purchase.classification = classification.key;
+  purchase.account = classification.account;
+  purchase.accountName = classification.label;
+  purchase.accountGroup = classification.group;
+  purchase.vatTreatment = classification.vat;
+  saveState();
+  renderPurchases();
+  renderReports();
+  showToast(`Compra classificada em ${classification.account} - ${classification.label}.`);
+});
 statusFilter.addEventListener("change", renderDocuments);
 typeInput.addEventListener("change", syncDocumentDialogForType);
+document.querySelector("#purchaseDescriptionInput").addEventListener("change", (event) => {
+  syncPurchaseClassificationFields(suggestPurchaseClassification(event.target.value));
+});
 userSearch.addEventListener("input", renderUsers);
 userStatusFilter.addEventListener("change", renderUsers);
 rows.addEventListener("click", (event) => {
@@ -1691,6 +1794,7 @@ document.querySelector("#createPurchaseButton").addEventListener("click", () => 
   const net = Number(document.querySelector("#purchaseNetInput").value || 0);
   const vatRate = Number(document.querySelector("#purchaseVatRateInput").value || 0);
   const vat = net * (vatRate / 100);
+  const classification = getPurchaseClassification(document.querySelector("#purchaseClassInput").value);
   if (net <= 0) {
     showToast("Informe a base tributavel da compra.");
     return;
@@ -1701,6 +1805,11 @@ document.querySelector("#createPurchaseButton").addEventListener("click", () => 
     nuit: document.querySelector("#supplierNuitInput").value.trim(),
     date: document.querySelector("#purchaseDateInput").value || new Date().toISOString().slice(0, 10),
     description: document.querySelector("#purchaseDescriptionInput").value.trim(),
+    classification: classification.key,
+    account: classification.account,
+    accountName: classification.label,
+    accountGroup: classification.group,
+    vatTreatment: classification.vat,
     project: hasModule("Projectos") ? purchaseProjectInput.value : "",
     net,
     vatRate,
@@ -1710,6 +1819,7 @@ document.querySelector("#createPurchaseButton").addEventListener("click", () => 
   saveState();
   renderAll();
   setView("purchases");
+  purchaseDialog.close();
   showToast("Factura de compra registada.");
 });
 
